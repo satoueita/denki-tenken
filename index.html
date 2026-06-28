@@ -229,16 +229,20 @@ function doLogin() {
     setTimeout(function() { loginSuccess(user); }, 400);
     return;
   }
-  // GASで認証（失敗・エラー時もログイン可）
   fetch(GAS_URL + '?action=auth&user=' + encodeURIComponent(user))
     .then(function(r) { return r.json(); })
     .then(function(j) {
-      // ok:false の場合もログインを許可（スプレッドシート未設定時の救済）
-      loginSuccess(user);
+      if (j.ok) {
+        loginSuccess(user);
+      } else {
+        errEl.textContent = '⛔ このユーザー名は許可されていません';
+      }
     })
     .catch(function(err) {
+      // 通信エラー時はログイン許可（オフライン対応）
       console.warn('GAS auth error:', err);
-      loginSuccess(user);
+      errEl.textContent = 'GAS通信エラー。そのままログインします...';
+      setTimeout(function() { loginSuccess(user); }, 1000);
     });
 }
 function loginSuccess(user) {
@@ -309,7 +313,7 @@ function saveToDrive(csv, fname) {
 // ===== タブ =====
 // 事業所リスト（GASから取得後に格納）
 var userFacilities = [];
-function getFacilities() { return userFacilities.length ? userFacilities : ['事業所を読み込み中...']; }
+function getFacilities() { return userFacilities; }
 
 function loadUserFacilities(callback) {
   if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) {
@@ -317,17 +321,23 @@ function loadUserFacilities(callback) {
     if (callback) callback();
     return;
   }
+  // タイムアウト付きfetch（3秒で諦めて直接入力モードに）
+  var done = false;
+  var timer = setTimeout(function() {
+    if (!done) { done = true; userFacilities = []; if (callback) callback(); }
+  }, 3000);
+
   fetch(GAS_URL + '?action=getUserInfo&user=' + encodeURIComponent(currentUser))
     .then(function(r) { return r.json(); })
     .then(function(j) {
-      if (j.ok && j.facilities && j.facilities.length) {
-        userFacilities = j.facilities;
-      } else {
-        userFacilities = [];
-      }
+      if (done) return;
+      clearTimeout(timer); done = true;
+      userFacilities = (j.ok && j.facilities && j.facilities.length) ? j.facilities : [];
       if (callback) callback();
     })
     .catch(function() {
+      if (done) return;
+      clearTimeout(timer); done = true;
       userFacilities = [];
       if (callback) callback();
     });
