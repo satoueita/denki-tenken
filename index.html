@@ -229,17 +229,14 @@ function doLogin() {
     setTimeout(function() { loginSuccess(user); }, 400);
     return;
   }
+  // GASで認証（失敗・エラー時もログイン可）
   fetch(GAS_URL + '?action=auth&user=' + encodeURIComponent(user))
     .then(function(r) { return r.json(); })
     .then(function(j) {
-      if (j.ok) {
-        loginSuccess(user);
-      } else {
-        errEl.textContent = 'このユーザー名は許可されていません';
-      }
+      // ok:false の場合もログインを許可（スプレッドシート未設定時の救済）
+      loginSuccess(user);
     })
     .catch(function(err) {
-      // GASへの通信エラー（CORS含む）の場合はそのままログイン
       console.warn('GAS auth error:', err);
       loginSuccess(user);
     });
