@@ -179,8 +179,9 @@ body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111;font-siz
 <div class="auto-badge" id="auto-badge">自動保存</div>
 <div class="toast" id="toast"></div>
 <script>
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbyQoRuK-0mccGciZsbz3vwa_ZKeyAC_IowiBfbApHBsv2LNXH2gc4sr-3sgBXMQ0jt3VA/exec';
-var GOOGLE_CLIENT_ID = '402946347212-e4b98tlg0q80arl7aalrf9qk20stjg84.apps.googleusercontent.com';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbzkxsy4PmRzhVnZE3ObNQDFaLXIc0q0_cT6CXSHPyMh1GDZVOF2vA2uErLRazC20j5Zsw/exec';
+// Google OAuth不要 - GAS WebApp経由でDrive保存
+// var GOOGLE_CLIENT_ID = '...'; // 不要になりました
 var DRIVE_FOLDER_ID = '1SytBeCvMBqJH6OVJeu3nDUH0IR0BvxKi'; // https://drive.google.com/drive/folders/1SytBeCvMBqJH6OVJeu3nDUH0IR0BvxKi
 var ANNOUNCE = '今月の注意事項がここに表示されます。';
 var USER_FACILITIES = { '__default__': ['事業所A', '事業所B', '事業所C'] };
@@ -206,7 +207,7 @@ var Y = now.getFullYear(), Mo = now.getMonth() + 1, D = now.getDate();
 var dateStr = Y + '年' + Mo + '月' + D + '日';
 var dateKey = Y + ('0' + Mo).slice(-2) + ('0' + D).slice(-2);
 
-var currentUser = '', driveToken = null, driveUser = null;
+var currentUser = '', driveToken = null, driveUser = null, gasConnected = false;
 var elecPages = [], genPages = [], solarPages = [], calcPages = [], camPages = [];
 var activeTab = '';
 var eSeq = 0, gSeq = 0, sSeq = 0, cSeq = 0, camSeq = 0;
@@ -247,9 +248,14 @@ function loginSuccess(user) {
   document.getElementById('hdr-sub').textContent = dateStr;
   document.getElementById('user-disp').textContent = '👤 ' + user;
   renderTabs();
-  addCalcPage();
-  addCamPage();
-  addElecPage(); // 最後に追加→電気室タブが最初に表示
+  // GAS設定済みならDrive状態を接続中に表示
+  if (GAS_URL.indexOf('YOUR_SCRIPT_ID') < 0) { gasConnected = true; updateDriveSt(true); }
+  // 事業所リストをGASから取得してからページ構築
+  loadUserFacilities(function() {
+    addCalcPage();
+    addCamPage();
+    addElecPage(); // 最後に追加→電気室タブが最初に表示
+  });
   setInterval(function() { if (unsaved) autoSave(); }, 600000);
   handleOAuth();
 }
@@ -263,117 +269,68 @@ document.getElementById('login-user').addEventListener('keydown', function(e) {
 
 // ===== Drive =====
 function handleOAuth() {
-  var hash = location.hash;
-  if (hash.indexOf('access_token') < 0) return;
-  var p = new URLSearchParams(hash.slice(1));
-  var token = p.get('access_token');
-  if (!token) return;
-  history.replaceState(null, '', location.pathname);
-  driveToken = token;
-  // ユーザー情報を取得
-  fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + token } })
-    .then(function(r) { return r.json(); })
-    .then(function(info) {
-      driveUser = info.email || 'Drive接続中';
-      updateDriveSt(true);
-      showToast('Google Driveに接続しました\n' + driveUser, 'ok');
-    })
-    .catch(function() {
-      driveUser = 'Drive接続中';
-      updateDriveSt(true);
-      showToast('Google Driveに接続しました', 'ok');
-    });
+  // GAS経由なのでOAuthコールバック不要
 }
 function updateDriveSt(c) {
   document.getElementById('drive-dot').className = 'drive-dot' + (c ? ' on' : '');
-  document.getElementById('drive-lbl').textContent = c ? ('✓ ' + (driveUser || 'Drive接続中')) : 'Drive未接続';
+  document.getElementById('drive-lbl').textContent = c ? '☁️ Drive接続済' : '☁️ Drive未設定';
 }
 function handleDriveBtn() {
-  if (driveToken) {
-    if (!confirm('Google Driveとの接続を解除しますか？')) return;
-    driveToken = null; driveUser = null;
-    updateDriveSt(false);
-    showToast('Drive接続を解除しました', 'ok');
-  } else {
-    showDriveLoginModal();
-  }
-}
-function showDriveLoginModal() {
-  if (GOOGLE_CLIENT_ID.indexOf('YOUR_GOOGLE') >= 0) {
-    showToast('Google Client IDが設定されていません。\nHTMLファイルの GOOGLE_CLIENT_ID を設定してください。', 'warn');
+  if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) {
+    showToast('GAS URLが未設定です\nHTMLファイルのGAS_URLを設定してください', 'warn');
     return;
   }
-  var ov = document.createElement('div');
-  ov.id = 'drive-modal';
-  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,50,.75);z-index:200;display:flex;align-items:center;justify-content:center';
-  var box = document.createElement('div');
-  box.style.cssText = 'background:#fff;border-radius:16px;padding:28px 24px;width:300px;max-width:90vw;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2)';
-  // アイコン
-  var icon = document.createElement('div');
-  icon.style.cssText = 'font-size:20px;margin-bottom:8px';
-  icon.textContent = '☁️';
-  // タイトル
-  var title = document.createElement('div');
-  title.style.cssText = 'font-size:14px;font-weight:700;color:#1d3a6e;margin-bottom:8px';
-  title.textContent = 'Google Drive に接続';
-  // 説明
-  var desc = document.createElement('div');
-  desc.style.cssText = 'font-size:12px;color:#666;margin-bottom:20px;line-height:1.6';
-  desc.innerHTML = 'Googleアカウントでログインして、<br>点検データをDriveに保存・読み込みできます。';
-  // Googleログインボタン
-  var loginBtn = document.createElement('button');
-  loginBtn.style.cssText = 'width:100%;height:44px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:10px';
-  var svgNS = 'http://www.w3.org/2000/svg';
-  var svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('width','18'); svg.setAttribute('height','18'); svg.setAttribute('viewBox','0 0 48 48');
-  var paths = [{fill:'#EA4335',d:'M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z'},{fill:'#4285F4',d:'M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z'},{fill:'#FBBC05',d:'M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z'},{fill:'#34A853',d:'M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z'}];
-  paths.forEach(function(p) { var el=document.createElementNS(svgNS,'path'); el.setAttribute('fill',p.fill); el.setAttribute('d',p.d); svg.appendChild(el); });
-  loginBtn.appendChild(svg);
-  var loginTxt = document.createElement('span');
-  loginTxt.textContent = 'Googleでログイン';
-  loginBtn.appendChild(loginTxt);
-  loginBtn.onclick = startDriveAuth;
-  // キャンセルボタン
-  var cancelBtn = document.createElement('button');
-  cancelBtn.style.cssText = 'width:100%;height:36px;border-radius:8px;border:1px solid #ddd;background:#f7f7f7;font-size:12px;cursor:pointer;color:#666';
-  cancelBtn.textContent = 'キャンセル';
-  cancelBtn.onclick = function() { document.body.removeChild(ov); };
-  // 注記
-  var note = document.createElement('div');
-  note.style.cssText = 'font-size:10px;color:#bbb;margin-top:12px;line-height:1.6';
-  note.textContent = '許可されたアカウントのみ保存できます';
-  box.appendChild(icon); box.appendChild(title); box.appendChild(desc);
-  box.appendChild(loginBtn); box.appendChild(cancelBtn); box.appendChild(note);
-  ov.appendChild(box);
-  ov.onclick = function(e) { if (e.target === ov) document.body.removeChild(ov); };
-  document.body.appendChild(ov);
+  // GASへの接続テスト
+  showToast('Drive接続を確認中...', 'ok');
+  fetch(GAS_URL + '?action=auth&user=' + encodeURIComponent(currentUser))
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      gasConnected = true;
+      updateDriveSt(true);
+      showToast('Driveに接続しました！\nCSVの保存・読み込みが可能です', 'ok');
+    })
+    .catch(function() {
+      showToast('Drive接続に失敗しました\nGAS URLを確認してください', 'err');
+    });
 }
-function startDriveAuth() {
-  var modal = document.getElementById('drive-modal');
-  if (modal) document.body.removeChild(modal);
-  var params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: location.origin + location.pathname,
-    response_type: 'token',
-    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
-    prompt: 'select_account'
-  });
-  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
-}
+// showDriveLoginModal / startDriveAuth: GAS方式では不要
 function saveToDrive(csv, fname) {
-  if (!driveToken) return Promise.resolve(false);
-  var meta = { name: fname, mimeType: 'text/csv' };
-  if (DRIVE_FOLDER_ID.indexOf('YOUR_FOLDER') < 0) meta.parents = [DRIVE_FOLDER_ID];
-  var form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
-  form.append('file', new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-    method: 'POST', headers: { Authorization: 'Bearer ' + driveToken }, body: form
-  }).then(function(r) { return r.ok; }).catch(function() { return false; });
+  if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) return Promise.resolve(false);
+  return fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'saveCSV', fileName: fname, csvContent: csv })
+  }).then(function(r) { return r.json(); })
+    .then(function(j) { return j.ok === true; })
+    .catch(function() { return false; });
 }
 
 // ===== タブ =====
-function getFacilities() { return USER_FACILITIES[currentUser] || USER_FACILITIES['__default__'] || []; }
+// 事業所リスト（GASから取得後に格納）
+var userFacilities = [];
+function getFacilities() { return userFacilities.length ? userFacilities : ['事業所を読み込み中...']; }
+
+function loadUserFacilities(callback) {
+  if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) {
+    userFacilities = USER_FACILITIES['__default__'] || [];
+    if (callback) callback();
+    return;
+  }
+  fetch(GAS_URL + '?action=getUserInfo&user=' + encodeURIComponent(currentUser))
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      if (j.ok && j.facilities && j.facilities.length) {
+        userFacilities = j.facilities;
+      } else {
+        userFacilities = [];
+      }
+      if (callback) callback();
+    })
+    .catch(function() {
+      userFacilities = [];
+      if (callback) callback();
+    });
+}
 function addElecPage() {
   eSeq++;
   var pid = 'e' + eSeq;
@@ -465,7 +422,7 @@ function renderTabs() {
   htab.className = 'tbtn' + (activeTab === 'hist' ? ' active' : '');
   htab.id = 'tab-hist';
   htab.textContent = '📋 履歴';
-  htab.onclick = function() { switchTab('hist'); };
+  htab.onclick = function() { showHistory(); };
   bar.appendChild(htab);
 }
 function switchTab(pid) {
@@ -1291,6 +1248,7 @@ function renderHistory() {
     page.className = 'page'; page.id = 'page-hist';
     document.getElementById('pages').appendChild(page);
   }
+  // ツールバーを常に構築
   page.innerHTML =
     '<div class="hist-toolbar">' +
       '<span>📋 保存済み記録</span>' +
@@ -1298,7 +1256,7 @@ function renderHistory() {
       '<button onclick="loadLocalHistory()" style="height:28px;padding:0 10px;border-radius:6px;border:1px solid #ddd;background:#f7f7f7;color:#444;font-size:11px;cursor:pointer">💾 端末</button>' +
     '</div>' +
     '<div id="hist-list"><div class="hist-empty">読み込み中...</div></div>';
-  // 自動でどちらかを読み込む
+  // 即座に自動読み込み
   if (driveToken) { loadDriveHistory(); } else { loadLocalHistory(); }
 }
 function loadLocalHistory() {
@@ -1308,34 +1266,145 @@ function loadLocalHistory() {
   renderHistList(hist, '端末（ローカル）');
 }
 function loadDriveHistory() {
-  if (!driveToken) { showToast('Google Driveに接続されていません\nフッターの「Drive未接続」をご確認ください', 'warn'); return; }
+  if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) {
+    showToast('GAS URLが未設定です', 'warn'); return;
+  }
   showToast('Driveから一覧を取得中...', 'ok');
-  var q = "mimeType='text/csv'";
-  if (DRIVE_FOLDER_ID.indexOf('YOUR_FOLDER') < 0) q += " and '" + DRIVE_FOLDER_ID + "' in parents";
-  fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&orderBy=createdTime+desc&pageSize=50&fields=files(id,name,createdTime,size)', {
-    headers: { Authorization: 'Bearer ' + driveToken }
-  }).then(function(r) { return r.json(); })
+  fetch(GAS_URL + '?action=getHistory')
+    .then(function(r) { return r.json(); })
     .then(function(data) {
+      if (!data.ok) { showToast('取得失敗: ' + (data.message||''), 'err'); return; }
       var files = data.files || [];
       if (!files.length) { showToast('Driveに保存済みファイルが見つかりません', 'warn'); renderDriveList([]); return; }
       showToast(files.length + '件のファイルを取得しました', 'ok');
       renderDriveList(files);
     })
-    .catch(function() { showToast('Drive一覧の取得に失敗しました', 'err'); });
+    .catch(function() { showToast('Drive一覧の取得に失敗しました\nGAS URLを確認してください', 'err'); });
 }
 function renderHistList(hist, source) {
   var list = document.getElementById('hist-list');
   if (!list) return;
   if (!hist.length) { list.innerHTML = '<div class="hist-empty">' + source + 'に保存済みの記録がありません</div>'; return; }
-  list.innerHTML = '<div style="padding:6px 14px;font-size:10px;color:#aaa">' + source + '（' + hist.length + '件）</div>';
+  list.innerHTML = '<div style="padding:6px 14px;font-size:10px;color:#aaa">' + source + '（' + hist.length + '件） — タップで詳細表示</div>';
   hist.forEach(function(h, i) {
     var div = document.createElement('div'); div.className = 'hist-item';
-    div.innerHTML = '<div class="hist-name">📋 ' + (h.facility || '未設定') + '</div>' +
-      '<div class="hist-meta">' + h.date + ' ／ ' + (h.inspector || '不明') + ' ／ ' + (h.savedAt || '').slice(0, 16).replace('T', ' ') + '</div>' +
-      '<div class="hist-detail" id="hd' + i + '">' + (h.summary || '詳細なし').replace(/\n/g, '<br>') + '</div>';
-    div.onclick = function() { var d = document.getElementById('hd' + i); if (d) d.classList.toggle('open'); };
+    div.innerHTML =
+      '<div class="hist-name">📋 ' + escHtml(h.facility || '未設定') + '</div>' +
+      '<div class="hist-meta">' + escHtml(h.date || '') + ' ／ ' + escHtml(h.inspector || '不明') + ' ／ ' + (h.savedAt || '').slice(0, 16).replace('T', ' ') + '</div>' +
+      '<div class="hist-detail" id="hd' + i + '"></div>';
+    div.onclick = function() {
+      var det = document.getElementById('hd' + i);
+      if (!det) return;
+      if (det.classList.contains('open')) { det.classList.remove('open'); return; }
+      // 端末ストレージからJSONデータを読み込んで詳細表示
+      det.innerHTML = '<div style="color:#aaa;font-size:11px;padding:4px 0">読み込み中...</div>';
+      det.classList.add('open');
+      var stored = store_get(h.key);
+      if (stored) {
+        try {
+          var data = JSON.parse(stored.value);
+          det.innerHTML = buildDetailHtml(data);
+        } catch(e) {
+          det.innerHTML = '<div style="font-size:11px;color:#888">' + escHtml(h.summary || '詳細データなし').replace(/\n/g,'<br>') + '</div>';
+        }
+      } else {
+        det.innerHTML = '<div style="font-size:11px;color:#888">' + escHtml(h.summary || '端末にデータが見つかりません').replace(/\n/g,'<br>') + '</div>';
+      }
+    };
     list.appendChild(div);
   });
+}
+
+function buildDetailHtml(data) {
+  var jl = { ok: '〇', warn: '△', na: '－', '': '－' };
+  var html = '';
+  // 基本情報
+  html += '<div style="font-size:11px;color:#555;margin-bottom:6px">' +
+    '点検日: <b>' + escHtml(data.date||'') + '</b>　点検者: <b>' + escHtml(data.inspector||'') + '</b></div>';
+  // 電気室
+  (data.elec||[]).forEach(function(pg) {
+    html += '<div style="background:#1d3a6e;color:#fff;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;margin:8px 0 4px">⚡ ' + escHtml(pg.label||'') + ' — ' + escHtml(pg.facility||'') + '</div>';
+    html += '<div style="font-size:11px;color:#555;margin-bottom:4px">気温: ' + escHtml(pg.temp||'-') + '°C　湿度: ' + escHtml(pg.hum||'-') + '%</div>';
+    // 電力量計
+    if (pg.kensin1) {
+      html += '<div style="font-size:11px;font-weight:700;color:#1d3a6e;margin:4px 0 2px">電力量計（検針）乗率×' + (pg.kensin1.mult||'') + '</div>';
+      html += detRow('全日電力量', pg.kensin1.all, 'kW') + detRow('有効電力量', pg.kensin1.eff, 'kW') + detRow('力率', pg.kensin1.pf, '') + detRow('最大需要電力', pg.kensin1.maxd, 'kW');
+    }
+    if (pg.kensin2) {
+      html += '<div style="font-size:11px;font-weight:700;color:#1d3a6e;margin:4px 0 2px">電力量計（本日）</div>';
+      html += detRow('全日電力量', pg.kensin2.all, 'kW') + detRow('有効電力量', pg.kensin2.eff, 'kW') + detRow('需要電力', pg.kensin2.maxd, 'kW');
+    }
+    // 電圧・電流
+    html += '<div style="font-size:11px;font-weight:700;color:#1d3a6e;margin:4px 0 2px">電圧・電流（高圧）</div>';
+    html += detRow('電圧 R相', pg.vr, 'kV') + detRow('電圧 S相', pg.vs, 'kV') + detRow('電圧 T相', pg.vt, 'kV');
+    html += detRow('電流 R相', pg.ar, 'A') + detRow('電流 S相', pg.as, 'A') + detRow('電流 T相', pg.at, 'A');
+    html += detRow('電力', pg.power, 'kW');
+    // 点検項目サマリー
+    var judgments = pg.judgments || {};
+    var ok = 0, w = 0, na = 0, total = Object.keys(judgments).length;
+    Object.keys(judgments).forEach(function(k) { if(judgments[k]==='ok')ok++; else if(judgments[k]==='warn')w++; else if(judgments[k]==='na')na++; });
+    html += '<div style="font-size:11px;font-weight:700;color:#1d3a6e;margin:4px 0 2px">点検項目</div>';
+    html += '<div style="font-size:11px;display:flex;gap:12px;margin-bottom:2px">' +
+      '<span style="color:#2e7d32">〇 良好: ' + ok + '</span>' +
+      '<span style="color:#e65100">△ 要観察: ' + w + '</span>' +
+      '<span style="color:#888">－ 対象外: ' + na + '</span>' +
+      '</div>';
+    // 要観察項目を表示
+    if (w > 0) {
+      html += '<div style="font-size:11px;color:#e65100;margin-bottom:2px">要観察項目:</div>';
+      Object.keys(judgments).forEach(function(k) {
+        if (judgments[k] === 'warn') {
+          var lbl = ELEC_ITEMS[parseInt(k)] || k;
+          html += '<div style="font-size:11px;color:#e65100;padding-left:8px">△ ' + escHtml(lbl) + '</div>';
+        }
+      });
+    }
+    // 変圧器
+    if (pg.transformers && pg.transformers.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:#1d3a6e;margin:4px 0 2px">高圧変圧器</div>';
+      pg.transformers.forEach(function(t) {
+        html += '<div style="font-size:11px;color:#555;padding-left:6px;border-left:2px solid #1d3a6e;margin:2px 0">' +
+          escHtml(t.label||'') + '（' + escHtml(t.use||'') + '）: 電圧R' + escHtml(t.vr||'-') + 'V　電流R' + escHtml(t.ar||'-') + 'A　温度' + escHtml(t.tp||'-') + '℃' +
+          '</div>';
+      });
+    }
+    // 記事欄
+    if (pg.notes && pg.notes !== '-') {
+      html += '<div style="font-size:11px;font-weight:700;color:#1d3a6e;margin:4px 0 2px">記事欄</div>';
+      html += '<div style="font-size:11px;color:#555;white-space:pre-wrap;background:#f7f9fc;padding:6px 8px;border-radius:6px">' + escHtml(pg.notes) + '</div>';
+    }
+  });
+  // 発電機
+  (data.gen||[]).forEach(function(pg) {
+    html += '<div style="background:#e65100;color:#fff;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;margin:8px 0 4px">🔥 ' + escHtml(pg.label||'') + '</div>';
+    var judgments = pg.judgments || {};
+    var w = Object.keys(judgments).filter(function(k){return judgments[k]==='warn';}).length;
+    var ok = Object.keys(judgments).filter(function(k){return judgments[k]==='ok';}).length;
+    html += '<div style="font-size:11px;display:flex;gap:12px;margin-bottom:4px"><span style="color:#2e7d32">〇 ' + ok + '</span><span style="color:#e65100">△ ' + w + '</span></div>';
+    (pg.generators||[]).forEach(function(g) {
+      html += '<div style="font-size:11px;color:#555;padding-left:6px;border-left:2px solid #e65100;margin:2px 0">' +
+        escHtml(g.label||'発電機') + ': 燃料' + escHtml(g.fuel||'-') + '%　電圧' + escHtml(g.volt||'-') + 'V　周波数' + escHtml(g.freq||'-') + 'Hz' +
+        '</div>';
+    });
+  });
+  // 太陽光
+  (data.solar||[]).forEach(function(pg) {
+    html += '<div style="background:#f57f17;color:#fff;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;margin:8px 0 4px">☀️ ' + escHtml(pg.label||'') + '</div>';
+    var judgments = pg.judgments || {};
+    var w = Object.keys(judgments).filter(function(k){return judgments[k]==='warn';}).length;
+    var ok = Object.keys(judgments).filter(function(k){return judgments[k]==='ok';}).length;
+    html += '<div style="font-size:11px;display:flex;gap:12px;margin-bottom:4px"><span style="color:#2e7d32">〇 ' + ok + '</span><span style="color:#e65100">△ ' + w + '</span></div>';
+    html += detRow('電圧R相', pg.vr, 'kV') + detRow('電流R相', pg.ar, 'A') + detRow('電力', pg.power, 'kW');
+  });
+  return html || '<div style="font-size:11px;color:#aaa">データなし</div>';
+}
+
+function detRow(label, val, unit) {
+  if (!val || val === '-') return '';
+  return '<div style="display:flex;align-items:baseline;padding:2px 0;border-bottom:1px solid #f5f5f5;gap:8px">' +
+    '<span style="flex:1;font-size:11px;color:#666">' + escHtml(label) + '</span>' +
+    '<span style="font-size:12px;color:#222;font-weight:500">' + escHtml(val) + ' <span style="font-size:10px;color:#888">' + escHtml(unit) + '</span></span>' +
+    '</div>';
 }
 function renderDriveList(files) {
   var list = document.getElementById('hist-list');
@@ -1360,14 +1429,14 @@ function renderDriveList(files) {
   });
 }
 function downloadDriveFile(fileId, fileName) {
-  if (!driveToken) { showToast('Drive未接続', 'warn'); return; }
   showToast('CSVを読み込み中...', 'ok');
-  fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', { headers: { Authorization: 'Bearer ' + driveToken } })
-    .then(function(r) { return r.text(); })
-    .then(function(text) {
-      showCsvViewer(fileName, text);
+  fetch(GAS_URL + '?action=getFile&fileId=' + encodeURIComponent(fileId))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) { showToast('読み込み失敗: ' + (data.message||''), 'err'); return; }
+      showCsvViewer(data.name || fileName, data.content || '');
     })
-    .catch(function() { showToast('読み込み失敗', 'err'); });
+    .catch(function() { showToast('読み込み失敗\nGAS URLを確認してください', 'err'); });
 }
 
 function showCsvViewer(fileName, csvText) {
@@ -1441,7 +1510,13 @@ function showCsvViewer(fileName, csvText) {
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-function showHistory() { switchTab('hist'); renderHistory(); }
+function showHistory() {
+  // 先にページを構築・読み込みしてからタブ切替
+  var old = document.getElementById('page-hist');
+  if (old) old.remove();
+  renderHistory();       // ページ生成＆データ読み込み
+  switchTab('hist');     // 生成済みページを表示
+}
 
 function showToast(msg, type) {
   var t = document.getElementById('toast');
