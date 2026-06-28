@@ -168,7 +168,10 @@ body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111;font-siz
   <div id="pages"></div>
 </div>
 <div class="footer" id="footer" style="display:none">
-  <div class="drive-st"><div class="drive-dot" id="drive-dot"></div><span id="drive-lbl">Drive未接続</span></div>
+  <div class="drive-st" onclick="handleDriveBtn()" style="cursor:pointer;min-width:80px">
+    <div class="drive-dot" id="drive-dot"></div>
+    <span id="drive-lbl" style="text-decoration:underline;text-underline-offset:2px">Drive未接続</span>
+  </div>
   <button class="btn-sec" onclick="showHistory()">📋 履歴</button>
   <button class="btn-sec" onclick="downloadCSV()">CSV</button>
   <button class="btn-prim" onclick="confirmSave()">💾 保存</button>
@@ -176,8 +179,9 @@ body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111;font-siz
 <div class="auto-badge" id="auto-badge">自動保存</div>
 <div class="toast" id="toast"></div>
 <script>
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbw0aSHbPg7nqeTbj45X4cpFi03MSjwRafr35D6MWiL9xdhoSj6dVRoeS3xraGPI4u5Ffw/exec';
-var DRIVE_FOLDER_ID = 'YOUR_FOLDER_ID';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyQoRuK-0mccGciZsbz3vwa_ZKeyAC_IowiBfbApHBsv2LNXH2gc4sr-3sgBXMQ0jt3VA/exec';
+var GOOGLE_CLIENT_ID = '402946347212-e4b98tlg0q80arl7aalrf9qk20stjg84.apps.googleusercontent.com';
+var DRIVE_FOLDER_ID = '1SytBeCvMBqJH6OVJeu3nDUH0IR0BvxKi'; // https://drive.google.com/drive/folders/1SytBeCvMBqJH6OVJeu3nDUH0IR0BvxKi
 var ANNOUNCE = '今月の注意事項がここに表示されます。';
 var USER_FACILITIES = { '__default__': ['事業所A', '事業所B', '事業所C'] };
 
@@ -202,7 +206,7 @@ var Y = now.getFullYear(), Mo = now.getMonth() + 1, D = now.getDate();
 var dateStr = Y + '年' + Mo + '月' + D + '日';
 var dateKey = Y + ('0' + Mo).slice(-2) + ('0' + D).slice(-2);
 
-var currentUser = '', driveToken = null;
+var currentUser = '', driveToken = null, driveUser = null;
 var elecPages = [], genPages = [], solarPages = [], calcPages = [], camPages = [];
 var activeTab = '';
 var eSeq = 0, gSeq = 0, sSeq = 0, cSeq = 0, camSeq = 0;
@@ -243,7 +247,9 @@ function loginSuccess(user) {
   document.getElementById('hdr-sub').textContent = dateStr;
   document.getElementById('user-disp').textContent = '👤 ' + user;
   renderTabs();
-  addElecPage();
+  addCalcPage();
+  addCamPage();
+  addElecPage(); // 最後に追加→電気室タブが最初に表示
   setInterval(function() { if (unsaved) autoSave(); }, 600000);
   handleOAuth();
 }
@@ -264,12 +270,95 @@ function handleOAuth() {
   if (!token) return;
   history.replaceState(null, '', location.pathname);
   driveToken = token;
-  updateDriveSt(true);
-  showToast('Google Driveに接続しました', 'ok');
+  // ユーザー情報を取得
+  fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + token } })
+    .then(function(r) { return r.json(); })
+    .then(function(info) {
+      driveUser = info.email || 'Drive接続中';
+      updateDriveSt(true);
+      showToast('Google Driveに接続しました\n' + driveUser, 'ok');
+    })
+    .catch(function() {
+      driveUser = 'Drive接続中';
+      updateDriveSt(true);
+      showToast('Google Driveに接続しました', 'ok');
+    });
 }
 function updateDriveSt(c) {
   document.getElementById('drive-dot').className = 'drive-dot' + (c ? ' on' : '');
-  document.getElementById('drive-lbl').textContent = c ? 'Drive接続中' : 'Drive未接続';
+  document.getElementById('drive-lbl').textContent = c ? ('✓ ' + (driveUser || 'Drive接続中')) : 'Drive未接続';
+}
+function handleDriveBtn() {
+  if (driveToken) {
+    if (!confirm('Google Driveとの接続を解除しますか？')) return;
+    driveToken = null; driveUser = null;
+    updateDriveSt(false);
+    showToast('Drive接続を解除しました', 'ok');
+  } else {
+    showDriveLoginModal();
+  }
+}
+function showDriveLoginModal() {
+  if (GOOGLE_CLIENT_ID.indexOf('YOUR_GOOGLE') >= 0) {
+    showToast('Google Client IDが設定されていません。\nHTMLファイルの GOOGLE_CLIENT_ID を設定してください。', 'warn');
+    return;
+  }
+  var ov = document.createElement('div');
+  ov.id = 'drive-modal';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,50,.75);z-index:200;display:flex;align-items:center;justify-content:center';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:16px;padding:28px 24px;width:300px;max-width:90vw;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2)';
+  // アイコン
+  var icon = document.createElement('div');
+  icon.style.cssText = 'font-size:20px;margin-bottom:8px';
+  icon.textContent = '☁️';
+  // タイトル
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:14px;font-weight:700;color:#1d3a6e;margin-bottom:8px';
+  title.textContent = 'Google Drive に接続';
+  // 説明
+  var desc = document.createElement('div');
+  desc.style.cssText = 'font-size:12px;color:#666;margin-bottom:20px;line-height:1.6';
+  desc.innerHTML = 'Googleアカウントでログインして、<br>点検データをDriveに保存・読み込みできます。';
+  // Googleログインボタン
+  var loginBtn = document.createElement('button');
+  loginBtn.style.cssText = 'width:100%;height:44px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:10px';
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width','18'); svg.setAttribute('height','18'); svg.setAttribute('viewBox','0 0 48 48');
+  var paths = [{fill:'#EA4335',d:'M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z'},{fill:'#4285F4',d:'M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z'},{fill:'#FBBC05',d:'M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z'},{fill:'#34A853',d:'M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z'}];
+  paths.forEach(function(p) { var el=document.createElementNS(svgNS,'path'); el.setAttribute('fill',p.fill); el.setAttribute('d',p.d); svg.appendChild(el); });
+  loginBtn.appendChild(svg);
+  var loginTxt = document.createElement('span');
+  loginTxt.textContent = 'Googleでログイン';
+  loginBtn.appendChild(loginTxt);
+  loginBtn.onclick = startDriveAuth;
+  // キャンセルボタン
+  var cancelBtn = document.createElement('button');
+  cancelBtn.style.cssText = 'width:100%;height:36px;border-radius:8px;border:1px solid #ddd;background:#f7f7f7;font-size:12px;cursor:pointer;color:#666';
+  cancelBtn.textContent = 'キャンセル';
+  cancelBtn.onclick = function() { document.body.removeChild(ov); };
+  // 注記
+  var note = document.createElement('div');
+  note.style.cssText = 'font-size:10px;color:#bbb;margin-top:12px;line-height:1.6';
+  note.textContent = '許可されたアカウントのみ保存できます';
+  box.appendChild(icon); box.appendChild(title); box.appendChild(desc);
+  box.appendChild(loginBtn); box.appendChild(cancelBtn); box.appendChild(note);
+  ov.appendChild(box);
+  ov.onclick = function(e) { if (e.target === ov) document.body.removeChild(ov); };
+  document.body.appendChild(ov);
+}
+function startDriveAuth() {
+  var modal = document.getElementById('drive-modal');
+  if (modal) document.body.removeChild(modal);
+  var params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: location.origin + location.pathname,
+    response_type: 'token',
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+    prompt: 'select_account'
+  });
+  location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
 }
 function saveToDrive(csv, fname) {
   if (!driveToken) return Promise.resolve(false);
@@ -356,10 +445,22 @@ function renderTabs() {
   mkAdd('🔥', '発電機', 'gtadd', addGenPage);
   solarPages.forEach(function(p) { mkTab(p, 'stab'); });
   mkAdd('☀️', '太陽光', 'stadd', addSolarPage);
-  calcPages.forEach(function(p) { mkTab(p, 'ctab'); });
-  mkAdd('🧮', '電卓', 'ctadd', addCalcPage);
-  camPages.forEach(function(p) { mkTab(p, 'camtab'); });
-  mkAdd('📷', 'カメラ', 'camtadd', addCamPage);
+  calcPages.forEach(function(p) {
+    var d = document.createElement('div');
+    d.className = 'tbtn ctab' + (activeTab === p.id ? ' active' : '');
+    d.id = 'tab-' + p.id;
+    d.textContent = '🧮 ' + p.label;
+    d.onclick = function() { switchTab(p.id); };
+    bar.appendChild(d);
+  });
+  camPages.forEach(function(p) {
+    var d = document.createElement('div');
+    d.className = 'tbtn camtab' + (activeTab === p.id ? ' active' : '');
+    d.id = 'tab-' + p.id;
+    d.textContent = '📷 ' + p.label;
+    d.onclick = function() { switchTab(p.id); };
+    bar.appendChild(d);
+  });
   var htab = document.createElement('div');
   htab.className = 'tbtn' + (activeTab === 'hist' ? ' active' : '');
   htab.id = 'tab-hist';
@@ -1196,7 +1297,9 @@ function renderHistory() {
       '<button onclick="loadDriveHistory()" style="height:28px;padding:0 12px;border-radius:6px;border:1px solid #1d3a6e;background:#f0f4ff;color:#1d3a6e;font-size:11px;font-weight:700;cursor:pointer">☁️ Driveから読込</button>' +
       '<button onclick="loadLocalHistory()" style="height:28px;padding:0 10px;border-radius:6px;border:1px solid #ddd;background:#f7f7f7;color:#444;font-size:11px;cursor:pointer">💾 端末</button>' +
     '</div>' +
-    '<div id="hist-list"><div class="hist-empty">上のボタンで履歴を読み込んでください</div></div>';
+    '<div id="hist-list"><div class="hist-empty">読み込み中...</div></div>';
+  // 自動でどちらかを読み込む
+  if (driveToken) { loadDriveHistory(); } else { loadLocalHistory(); }
 }
 function loadLocalHistory() {
   var hist = [];
@@ -1258,15 +1361,85 @@ function renderDriveList(files) {
 }
 function downloadDriveFile(fileId, fileName) {
   if (!driveToken) { showToast('Drive未接続', 'warn'); return; }
-  showToast('ダウンロード中...', 'ok');
+  showToast('CSVを読み込み中...', 'ok');
   fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', { headers: { Authorization: 'Bearer ' + driveToken } })
-    .then(function(r) { return r.blob(); })
-    .then(function(blob) {
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a'); a.href = url; a.download = fileName; a.click(); URL.revokeObjectURL(url);
-      showToast('ダウンロード完了: ' + fileName, 'ok');
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      showCsvViewer(fileName, text);
     })
-    .catch(function() { showToast('ダウンロード失敗', 'err'); });
+    .catch(function() { showToast('読み込み失敗', 'err'); });
+}
+
+function showCsvViewer(fileName, csvText) {
+  // BOMを除去
+  var text = csvText.replace(/^\uFEFF/, '');
+  var lines = text.split('\n');
+  // オーバーレイ表示
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:10px';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:12px;width:96vw;max-width:480px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.3)';
+  // ヘッダ
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'padding:12px 14px;background:#1d3a6e;color:#fff;display:flex;align-items:center;gap:8px;flex-shrink:0';
+  hdr.innerHTML = '<span style="flex:1;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📄 ' + fileName + '</span>';
+  var btnDl = document.createElement('button');
+  btnDl.textContent = '📥 DL';
+  btnDl.style.cssText = 'height:28px;padding:0 10px;border-radius:6px;border:none;background:#fff;color:#1d3a6e;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;margin-right:6px';
+  btnDl.onclick = function() {
+    var blob = new Blob([csvText], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = fileName; a.click(); URL.revokeObjectURL(url);
+    showToast('ダウンロードしました', 'ok');
+  };
+  var btnCl = document.createElement('button');
+  btnCl.textContent = '✕ 閉じる';
+  btnCl.style.cssText = 'height:28px;padding:0 10px;border-radius:6px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:11px;cursor:pointer;flex-shrink:0';
+  btnCl.onclick = function() { document.body.removeChild(ov); };
+  hdr.appendChild(btnDl); hdr.appendChild(btnCl);
+  // コンテンツ
+  var content = document.createElement('div');
+  content.style.cssText = 'overflow-y:auto;flex:1;padding:12px 14px';
+  // CSV内容をセクションごとに表示
+  var html = '';
+  var currentSection = '';
+  lines.forEach(function(line) {
+    var trimmed = line.trim();
+    if (!trimmed) { html += '<div style="height:8px"></div>'; return; }
+    // セクションヘッダ（【】で囲まれた行）
+    if (trimmed.startsWith('【') && trimmed.indexOf('】') > 0) {
+      html += '<div style="margin:8px 0 4px;padding:6px 10px;background:#1d3a6e;color:#fff;border-radius:6px;font-size:12px;font-weight:700">' + escHtml(trimmed) + '</div>';
+      currentSection = trimmed;
+      return;
+    }
+    // コメント行（//で始まる）はスキップ
+    var parts = trimmed.split(',');
+    if (parts.length === 1) {
+      // ラベルのみの行（小見出し）
+      html += '<div style="margin:6px 0 2px;font-size:11px;font-weight:700;color:#1d3a6e;border-bottom:1px solid #e8eaf0;padding-bottom:2px">' + escHtml(trimmed) + '</div>';
+    } else {
+      var key = parts[0] || '';
+      var val = parts.slice(1).join(',').trim();
+      // 判定値の色分け
+      var valStyle = 'color:#333';
+      if (val === '〇') valStyle = 'color:#2e7d32;font-weight:700';
+      else if (val === '△') valStyle = 'color:#e65100;font-weight:700';
+      else if (val === '未判定') valStyle = 'color:#bbb';
+      html += '<div style="display:flex;align-items:baseline;padding:3px 0;border-bottom:1px solid #f5f5f5;gap:8px">' +
+        '<span style="flex:1;font-size:12px;color:#555">' + escHtml(key) + '</span>' +
+        '<span style="font-size:12px;' + valStyle + ';text-align:right">' + escHtml(val) + '</span>' +
+        '</div>';
+    }
+  });
+  content.innerHTML = html || '<div style="color:#bbb;text-align:center;padding:20px;font-size:12px">内容がありません</div>';
+  box.appendChild(hdr); box.appendChild(content);
+  ov.appendChild(box);
+  ov.onclick = function(e) { if (e.target === ov) document.body.removeChild(ov); };
+  document.body.appendChild(ov);
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function showHistory() { switchTab('hist'); renderHistory(); }
 
