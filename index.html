@@ -1183,7 +1183,7 @@ function confirmSave() {
   var d = collectAll();
   var summary = '点検日: ' + d.date + '\n点検者: ' + d.inspector + '\n事業所: ' + d.facilityName + '\n電気室: ' + d.elec.length + '件  発電機: ' + d.gen.length + '件  太陽光: ' + d.solar.length + '件';
   if (warns.length > 0) {
-    var wmsg = '⚠️ 未入力の警告 (' + warns.length + '件)\n\n' + warns.slice(0, 5).join('\n') + (warns.length > 5 ? '\n...他' + (warns.length - 5) + '件' : '') + '\n\nそのまま保存しますか？';
+    var wmsg = '未入力の警告 (' + warns.length + '件)\n\n' + warns.slice(0, 5).join('\n') + (warns.length > 5 ? '\n...他' + (warns.length - 5) + '件' : '') + '\n\nそのまま保存しますか？';
     if (!confirm(wmsg)) return;
   }
   if (!confirm('【確認1/2】以下の内容を保存します。\n\n' + summary + '\n\nよろしいですか？')) return;
@@ -1215,14 +1215,12 @@ function saveAll(d) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a'); a.href = url; a.download = fname; a.click(); URL.revokeObjectURL(url);
     if (GAS_URL.indexOf('YOUR_SCRIPT_ID') < 0) {
-      showToast(ok ? '✅ Drive保存＆CSV完了！' : '⚠️ Drive保存失敗
-CSVはダウンロード済み', ok ? 'ok' : 'warn');
+      showToast(ok ? 'Drive保存&CSV完了！' : 'Drive保存失敗 CSVはダウンロード済み', ok ? 'ok' : 'warn');
     } else {
-      showToast('✅ CSV保存完了', 'ok');
+      showToast('CSV保存完了', 'ok');
     }
   }).catch(function(e) {
-    showToast('⚠️ Drive保存エラー
-CSVをダウンロードします', 'warn');
+    showToast('Drive保存エラー CSVをダウンロードします', 'warn');
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a'); a.href = url; a.download = fname; a.click(); URL.revokeObjectURL(url);
