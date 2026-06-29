@@ -213,6 +213,17 @@ var unsaved = false, inputStarted = false;
 function store_set(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
 function store_get(k) { try { var v = localStorage.getItem(k); return v ? { value: v } : null; } catch(e) { return null; } }
 
+// セッション保持（リフレッシュ対応）
+function saveSession(user) {
+  try { sessionStorage.setItem('tenken_user', user); } catch(e) {}
+}
+function loadSession() {
+  try { return sessionStorage.getItem('tenken_user') || ''; } catch(e) { return ''; }
+}
+function clearSession() {
+  try { sessionStorage.removeItem('tenken_user'); } catch(e) {}
+}
+
 // ===== ログイン =====
 function doLogin() {
   var user = document.getElementById('login-user').value.trim();
@@ -242,6 +253,7 @@ function doLogin() {
 }
 function loginSuccess(user) {
   currentUser = user;
+  saveSession(user); // リフレッシュ時に復元するためセッションに保存
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
   document.getElementById('footer').style.display = 'flex';
@@ -261,6 +273,7 @@ function loginSuccess(user) {
 }
 function doLogout() {
   if (!confirm('ログアウトしますか？')) return;
+  clearSession();
   location.reload();
 }
 document.getElementById('login-user').addEventListener('keydown', function(e) {
@@ -296,8 +309,18 @@ function handleDriveBtn() {
 // showDriveLoginModal / startDriveAuth: GAS方式では不要
 function saveToDrive(csv, fname) {
   if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) return Promise.resolve(false);
-  var opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'saveCSV', fileName: fname, csvContent: csv }) };
-  return fetch(GAS_URL, opts).then(function(r) { return r.json(); }).then(function(j) { if (!j.ok) throw new Error(j.message||'GASエラー'); return true; }).catch(function(e) { console.error('saveToDrive:', e); return false; });
+  // GASはCORSヘッダを返せないためno-corsで送信（レスポンスは読めないがGAS側は実行される）
+  return fetch(GAS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'saveCSV', fileName: fname, csvContent: csv })
+  }).then(function() {
+    return true; // no-corsではレスポンス読めないが送信成功とみなす
+  }).catch(function(e) {
+    console.error('saveToDrive error:', e);
+    return false;
+  });
 }
 
 // ===== タブ =====
@@ -657,7 +680,7 @@ function buildElecPage(pid) {
   var page = document.createElement('div');
   page.className = 'page'; page.id = 'page-' + pid;
   var facOpts = getFacilities().map(function(f) { return '<option value="' + f + '">' + f + '</option>'; }).join('');
-  var kikiFixed = ['高圧ケーブル','LBS(コンデンサ用)','LBS(電灯)','LBS(動力)'].map(function(k) { return fixedKikiHtml(pid, k); }).join('');
+  var kikiFixed = ['高圧ケーブル','LBS(コンデンサ用)'].map(function(k) { return fixedKikiHtml(pid, k); }).join('');
   var sokHtml = SOK_ITEMS.map(function(s) {
     return '<div class="mrow"><div class="mlabel">' + s.label + '</div>' + mInp(pid + '-sok-' + s.label.replace(/[^a-z]/gi,'')) + '<div class="munit">' + s.unit + '</div></div>';
   }).join('');
@@ -1676,6 +1699,21 @@ function showAutoBadge() {
   b.style.display = 'block';
   setTimeout(function() { b.style.display = 'none'; }, 2500);
 }
+
+// ===== ページロード時にセッション復元・リフレッシュ対応 =====
+// リフレッシュ前に自動保存
+window.addEventListener('beforeunload', function() {
+  if (unsaved && currentUser) {
+    try { autoSave(); } catch(e) {}
+  }
+});
+
+(function() {
+  var savedUser = loadSession();
+  if (savedUser) {
+    loginSuccess(savedUser);
+  }
+})();
 </script>
 </body>
 </html>
