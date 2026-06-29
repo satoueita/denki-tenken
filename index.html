@@ -434,7 +434,7 @@ function switchTab(pid) {
   document.querySelectorAll('.tbtn,.tadd').forEach(function(t) { t.classList.remove('active'); });
   var tb = document.getElementById('tab-' + pid);
   if (tb) tb.classList.add('active');
-  if (pid === 'hist') renderHistory();
+  // 履歴はshowHistory()で制御
 }
 
 // ===== ヘルパー =====
@@ -1265,14 +1265,17 @@ function renderHistory() {
     '<div style="background:#fff;border-bottom:1px solid #e8eaf0;padding:10px 14px">' +
       '<div style="font-size:12px;font-weight:700;color:#1d3a6e;margin-bottom:8px">📋 保存済み記録</div>' +
       '<div style="display:flex;gap:8px">' +
-        '<button id="btn-drive-hist" onclick="loadDriveHistory()" style="flex:1;height:40px;border-radius:8px;border:2px solid #1d3a6e;background:#f0f4ff;color:#1d3a6e;font-size:12px;font-weight:700;cursor:pointer">☁️ Driveから読込</button>' +
-        '<button id="btn-local-hist" onclick="loadLocalHistory()" style="flex:1;height:40px;border-radius:8px;border:2px solid #ddd;background:#f7f7f7;color:#666;font-size:12px;font-weight:700;cursor:pointer">💾 端末から読込</button>' +
+        '<button id="btn-hist-drive" onclick="loadDriveHistory()" style="flex:1;height:40px;border-radius:8px;border:2px solid #1d3a6e;background:#f0f4ff;color:#1d3a6e;font-size:12px;font-weight:700;cursor:pointer">☁ Driveから読込</button>' +
+        '<button id="btn-hist-local" onclick="loadLocalHistory()" style="flex:1;height:40px;border-radius:8px;border:2px solid #ddd;background:#f7f7f7;color:#666;font-size:12px;font-weight:700;cursor:pointer">端末から読込</button>' +
       '</div>' +
     '</div>' +
-    '<div id="hist-source-bar" style="display:none;padding:5px 14px;font-size:11px;font-weight:700;background:#e8f5e9;color:#2e7d32;border-bottom:1px solid #c8e6c9"></div>' +
+    '<div id="hist-source" style="display:none;padding:5px 14px;font-size:11px;font-weight:700;background:#e8f5e9;color:#2e7d32;border-bottom:1px solid #c8e6c9"></div>' +
     '<div id="hist-list"><div class="hist-empty">上のボタンで履歴を読み込んでください</div></div>';
   // 自動読み込み
-  if (GAS_URL.indexOf('YOUR_SCRIPT_ID') < 0) { loadDriveHistory(); } else { loadLocalHistory(); }
+  // 自動読み込み：Drive設定済みならDriveから、それ以外は端末から
+  setTimeout(function() {
+    if (GAS_URL.indexOf('YOUR_SCRIPT_ID') < 0) { loadDriveHistory(); } else { loadLocalHistory(); }
+  }, 100);
 }
 function loadLocalHistory() {
   var hist = [];
