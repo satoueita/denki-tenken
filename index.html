@@ -357,6 +357,20 @@ function saveToDrive(csv, fname) {
 // 事業所リスト（GASから取得後に格納）
 var userFacilities = [];
 function getFacilities() { return userFacilities; }
+function onFacilitySelect(pid) {
+  var sel = document.getElementById(pid + '-fsel');
+  var inp = document.getElementById(pid + '-facility');
+  if (!sel || !inp) return;
+  if (sel.value === '__other__') {
+    inp.style.display = 'block';
+    inp.value = '';
+    inp.focus();
+  } else {
+    inp.style.display = 'none';
+    inp.value = sel.value;
+  }
+  markUnsaved();
+}
 
 function loadUserFacilities(callback) {
   if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) {
@@ -711,8 +725,11 @@ function buildElecPage(pid) {
   page.innerHTML = announceHtml() +
     '<div class="mg">' +
       '<div class="mi mf"><label>事業所名</label>' +
-        '<input type="text" id="' + pid + '-facility" list="' + pid + '-fdl" placeholder="入力または選択" inputmode="latin" oninput="markUnsaved()" autocomplete="off" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px;background:#fafafa;font-size:14px;padding:0 10px;outline:none;color:#111">' +
-        '<datalist id="' + pid + '-fdl">' + facOpts + '</datalist>' +
+        '<select id="' + pid + '-fsel" onchange="onFacilitySelect(\'' + pid + '\')" style="width:100%;height:38px;border:1px solid #ddd;border-radius:6px;background:#fafafa url(&quot;data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27 fill=%27%231d3a6e%27><path d=%27M5 7l5 5 5-5z%27/></svg>&quot;) no-repeat right 10px center;background-size:18px;font-size:14px;padding:0 32px 0 10px;outline:none;color:#111;-webkit-appearance:none;appearance:none">' +
+          '<option value="">-- 選択してください --</option>' + facOpts +
+          '<option value="__other__">その他（直接入力）</option>' +
+        '</select>' +
+        '<input type="text" id="' + pid + '-facility" placeholder="事業所名を入力" inputmode="latin" oninput="markUnsaved()" style="display:none;width:100%;height:38px;border:1px solid #ddd;border-radius:6px;background:#fafafa;font-size:14px;padding:0 10px;outline:none;color:#111;margin-top:6px">' +
       '</div>' +
       '<div class="mi"><label>点検日</label><div class="av">' + dateStr + '</div></div>' +
       '<div class="mi mf"><label>気温 / 湿度</label>' +
