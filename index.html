@@ -32,6 +32,8 @@ body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111;font-siz
 .tbtn.stab.active{color:#f57f17;border-bottom-color:#f57f17}
 .tbtn.ctab.active{color:#2e7d32;border-bottom-color:#2e7d32}
 .tbtn.camtab.active{color:#6a1b9a;border-bottom-color:#6a1b9a}
+.tbtn.btab.active{color:#00897b;border-bottom-color:#00897b}
+.tadd.btadd{color:#00897b}
 .tadd{flex-shrink:0;padding:5px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;border-bottom:2px solid transparent}
 .tadd .ti{font-size:14px;line-height:1}
 .tadd .tl{font-size:9px;font-weight:700}
@@ -63,7 +65,7 @@ body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111;font-siz
 .jbtn{width:34px;height:28px;border-radius:6px;border:1px solid #ddd;background:#f7f7f7;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#999;font-weight:600}
 .jbtn.ok.on{background:#e6f4ea;border-color:#4caf50;color:#2e7d32}
 .jbtn.warn.on{background:#fff3e0;border-color:#ff9800;color:#e65100}
-.jbtn.na.on{background:#f0f0f0;border-color:#aaa;color:#555}
+.jbtn.na.on{background:#e3f2fd;border-color:#0288d1;color:#0277bd}
 .bulk-bar{padding:6px 10px;display:flex;justify-content:flex-end;border-bottom:1px solid #f0f0f0;background:#f7fbf7}
 .bulk-btn{height:28px;padding:0 14px;border-radius:6px;border:1px solid #4caf50;background:#e6f4ea;color:#2e7d32;font-size:11px;font-weight:700;cursor:pointer}
 .mgl{padding:5px 12px 3px;font-size:11px;font-weight:700;color:#1d3a6e;background:#f0f4ff;border-bottom:1px solid #dde4f8;border-top:1px solid #dde4f8}
@@ -72,6 +74,7 @@ body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111;font-siz
 .mlabel{flex:1;font-size:12px;color:#333;white-space:nowrap}
 .mhint{font-size:10px;color:#bbb;margin-top:1px}
 .minp{height:30px;width:82px;border:1px solid #ddd;border-radius:6px;background:#fafafa;color:#111;font-size:13px;text-align:right;padding:0 6px;outline:none;flex-shrink:0}
+.minp.is-dash{color:#0288d1;font-weight:700}
 .minp:focus{border-color:#1d3a6e}
 .minp.af{background:#f0f8e8;border-color:#a5d6a7;color:#2e7d32}
 .minp.warn{border-color:#e65100!important;background:#fff8f0!important}
@@ -127,6 +130,26 @@ body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111;font-siz
 .cam-thumb img{width:100%;height:100%;object-fit:cover}
 .cam-tdel{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(200,40,40,.85);color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .cam-empty{text-align:center;padding:20px;font-size:12px;color:#bbb}
+/* ツールページ（電卓・カメラ・ストップウォッチ統合） */
+.tool-subbar{display:flex;background:#fff;border-bottom:1px solid #e8eaf0;position:sticky;top:86px;z-index:30}
+.tool-subbtn{flex:1;padding:10px 6px;text-align:center;font-size:12px;font-weight:700;color:#888;cursor:pointer;border-bottom:3px solid transparent}
+.tool-subbtn.active{color:#1d3a6e;border-bottom-color:#1d3a6e;background:#f7f9fc}
+.tool-pane{display:none}
+.tool-pane.active{display:block}
+/* ストップウォッチ */
+.sw-wrap{padding:24px 16px;text-align:center}
+.sw-display{font-size:48px;font-weight:700;color:#1d3a6e;font-variant-numeric:tabular-nums;letter-spacing:1px;margin-bottom:6px}
+.sw-ms{font-size:20px;color:#888;font-variant-numeric:tabular-nums}
+.sw-btns{display:flex;gap:12px;justify-content:center;margin-top:20px}
+.sw-btn{width:84px;height:84px;border-radius:50%;border:none;font-size:14px;font-weight:700;cursor:pointer;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.sw-btn.start{background:#2e7d32}
+.sw-btn.stop{background:#c62828}
+.sw-btn.lap{background:#1d3a6e}
+.sw-btn.reset{background:#888}
+.sw-btn:disabled{opacity:.35;cursor:default}
+.sw-laps{margin-top:20px;text-align:left;max-width:300px;margin-left:auto;margin-right:auto}
+.sw-lap-row{display:flex;justify-content:space-between;padding:8px 12px;font-size:13px;border-bottom:1px solid #f0f0f0;color:#444}
+.sw-lap-row .lap-num{color:#1d3a6e;font-weight:700}
 /* 履歴 */
 .hist-toolbar{padding:10px 14px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #e8eaf0;background:#fff}
 .hist-toolbar span{flex:1;font-size:11px;color:#888;font-weight:600}
@@ -160,7 +183,7 @@ body{font-family:-apple-system,sans-serif;background:#f0f2f5;color:#111;font-siz
 .npbtn:active{transform:scale(.93);background:#e0e0e0}
 .npbtn.np-action{background:#d1d5db;color:#111}
 .npbtn.np-ok{background:#1d3a6e;color:#fff;font-size:18px}
-.npbtn.np-minus{background:#fff;color:#1d3a6e;font-size:18px}
+.npbtn.np-minus{background:#e3f2fd;color:#0288d1;font-size:18px}
 </style>
 </head>
 <body>
@@ -204,9 +227,9 @@ var SOLAR_CATS = [{ cat: '引込・受変電設備', items: ['責任分界開閉
 var SOLAR_ITEMS = [];
 SOLAR_CATS.forEach(function(c) { SOLAR_ITEMS = SOLAR_ITEMS.concat(c.items); });
 
-var KIKI_ELEC = ['高圧ケーブル','LBS(コンデンサ用)','LBS(電灯)','LBS(動力)','VCS','コンデンサ','リアクトル','断路器','その他（自由記載）'];
-var KIKI_SOLAR = ['PCS','直流ケーブル','パネル','高圧ケーブル','LBS(コンデンサ用)','LBS(電灯)','LBS(動力)','VCS','コンデンサ','リアクトル','断路器','その他（自由記載）'];
-var SOK_ITEMS = [{ label: 'SOG電流', unit: 'mA' },{ label: 'A種接地装置', unit: 'mA' },{ label: 'C種接地装置', unit: 'mA' },{ label: 'D種接地装置', unit: 'mA' }];
+var KIKI_ELEC = ['高圧ケーブル','LBS(主遮断用)','LBS(電灯)','LBS(動力)','VCS','コンデンサ','リアクトル','断路器','その他（自由記載）'];
+var KIKI_SOLAR = ['PCS','直流ケーブル','パネル','高圧ケーブル','LBS(主遮断用)','LBS(電灯)','LBS(動力)','VCS','コンデンサ','リアクトル','断路器','その他（自由記載）'];
+var SOK_ITEMS = [{ label: 'SOG電流', unit: 'mA' },{ label: 'A種接地装置(PAS)', unit: 'mA' },{ label: 'A種接地装置', unit: 'mA' },{ label: 'C種接地装置', unit: 'mA' },{ label: 'D種接地装置', unit: 'mA' }];
 var TR_USES = ['電灯','動力','非常電灯','非常動力','その他'];
 
 var now = new Date();
@@ -215,11 +238,12 @@ var dateStr = Y + '年' + Mo + '月' + D + '日';
 var dateKey = Y + ('0' + Mo).slice(-2) + ('0' + D).slice(-2);
 
 var currentUser = '', driveToken = null, driveUser = null, gasConnected = false;
-var elecPages = [], genPages = [], solarPages = [], calcPages = [], camPages = [];
+var elecPages = [], genPages = [], solarPages = [], battPages = [], toolPages = [];
 var activeTab = '';
-var eSeq = 0, gSeq = 0, sSeq = 0, cSeq = 0, camSeq = 0;
+var eSeq = 0, gSeq = 0, sSeq = 0, bSeq = 0, toolSeq = 0;
 var trSeq = {}, kkSeq = {}, k1Seq = {}, k2Seq = {}, sokSeq = {};
 var camPhotos = {}, camStreams = {};
+var swState = {}; // ストップウォッチ状態（ページIDごと）
 var unsaved = false, inputStarted = false;
 
 function store_set(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
@@ -276,8 +300,7 @@ function loginSuccess(user) {
   if (GAS_URL.indexOf('YOUR_SCRIPT_ID') < 0) { gasConnected = true; updateDriveSt(true); }
   // 事業所リストをGASから取得してからページ構築
   loadUserFacilities(function() {
-    addCalcPage();
-    addCamPage();
+    addToolPage();
     addElecPage(); // 最後に追加→電気室タブが最初に表示
   });
   setInterval(function() { if (unsaved) autoSave(); }, 600000);
@@ -382,31 +405,31 @@ function addSolarPage() {
   trSeq[pid] = 0; kkSeq[pid] = 0;
   renderTabs(); buildSolarPage(pid); switchTab(pid);
 }
-function addCalcPage() {
-  cSeq++;
-  var pid = 'calc' + cSeq;
-  calcPages.push({ id: pid, label: '電卓' + (cSeq > 1 ? cSeq : '') });
-  renderTabs(); buildCalcPage(pid); switchTab(pid);
+function addBattPage() {
+  bSeq++;
+  var pid = 'b' + bSeq;
+  battPages.push({ id: pid, label: '蓄電池' + bSeq, cellCount: 0 });
+  renderTabs(); buildBattPage(pid); switchTab(pid);
 }
-function addCamPage() {
-  camSeq++;
-  var pid = 'cam' + camSeq;
-  camPages.push({ id: pid, label: 'カメラ' + (camSeq > 1 ? camSeq : '') });
-  camPhotos[pid] = [];
-  renderTabs(); buildCamPage(pid); switchTab(pid);
+function addToolPage() {
+  toolSeq++;
+  var pid = 'tool' + toolSeq;
+  toolPages.push({ id: pid, label: 'ツール' + (toolSeq > 1 ? toolSeq : ''), sub: 'calc' });
+  renderTabs(); buildToolPage(pid); switchTab(pid);
 }
 function removePage(pid) {
   if (!confirm('このページを削除しますか？')) return;
   elecPages = elecPages.filter(function(p) { return p.id !== pid; });
   genPages = genPages.filter(function(p) { return p.id !== pid; });
   solarPages = solarPages.filter(function(p) { return p.id !== pid; });
-  calcPages = calcPages.filter(function(p) { return p.id !== pid; });
-  camPages = camPages.filter(function(p) { return p.id !== pid; });
+  battPages = battPages.filter(function(p) { return p.id !== pid; });
+  toolPages = toolPages.filter(function(p) { return p.id !== pid; });
   if (camStreams[pid]) { camStreams[pid].getTracks().forEach(function(t) { t.stop(); }); delete camStreams[pid]; }
+  swStop(pid);
   var el = document.getElementById('page-' + pid);
   if (el) el.remove();
   renderTabs();
-  var all = [].concat(elecPages, genPages, solarPages, calcPages, camPages);
+  var all = [].concat(elecPages, genPages, solarPages, battPages, toolPages);
   if (all.length > 0) switchTab(all[0].id);
 }
 function renderTabs() {
@@ -433,19 +456,13 @@ function renderTabs() {
   mkAdd('🔥', '発電機', 'gtadd', addGenPage);
   solarPages.forEach(function(p) { mkTab(p, 'stab'); });
   mkAdd('☀️', '太陽光', 'stadd', addSolarPage);
-  calcPages.forEach(function(p) {
+  battPages.forEach(function(p) { mkTab(p, 'btab'); });
+  mkAdd('🔋', '蓄電池', 'btadd', addBattPage);
+  toolPages.forEach(function(p) {
     var d = document.createElement('div');
     d.className = 'tbtn ctab' + (activeTab === p.id ? ' active' : '');
     d.id = 'tab-' + p.id;
-    d.textContent = '🧮 ' + p.label;
-    d.onclick = function() { switchTab(p.id); };
-    bar.appendChild(d);
-  });
-  camPages.forEach(function(p) {
-    var d = document.createElement('div');
-    d.className = 'tbtn camtab' + (activeTab === p.id ? ' active' : '');
-    d.id = 'tab-' + p.id;
-    d.textContent = '📷 ' + p.label;
+    d.textContent = '🛠 ' + p.label;
     d.onclick = function() { switchTab(p.id); };
     bar.appendChild(d);
   });
@@ -499,11 +516,6 @@ function toggle(hdr) {
 function announceHtml() { return '<div class="announce">📢 ' + ANNOUNCE + '</div>'; }
 
 // ===== 気温・湿度自動取得 =====
-function applyFacility(pid) {
-  var sel = document.getElementById(pid + '-fsel');
-  var inp = document.getElementById(pid + '-facility');
-  if (sel && inp && sel.value) { inp.value = sel.value; markUnsaved(); }
-}
 function getWeather(pid) {
   if (!navigator.geolocation) { showToast('位置情報が使えません', 'warn'); return; }
   showToast('位置情報を取得中...', 'ok');
@@ -691,7 +703,7 @@ function buildElecPage(pid) {
   var page = document.createElement('div');
   page.className = 'page'; page.id = 'page-' + pid;
   var facOpts = getFacilities().map(function(f) { return '<option value="' + f + '">' + f + '</option>'; }).join('');
-  var kikiFixed = ['高圧ケーブル','LBS(コンデンサ用)'].map(function(k) { return fixedKikiHtml(pid, k); }).join('');
+  var kikiFixed = ['高圧ケーブル','LBS(主遮断用)'].map(function(k) { return fixedKikiHtml(pid, k); }).join('');
   var sokHtml = SOK_ITEMS.map(function(s) {
     return '<div class="mrow"><div class="mlabel">' + s.label + '</div>' + mInp(pid + '-sok-' + s.label.replace(/[^a-z]/gi,'')) + '<div class="munit">' + s.unit + '</div></div>';
   }).join('');
@@ -699,12 +711,8 @@ function buildElecPage(pid) {
   page.innerHTML = announceHtml() +
     '<div class="mg">' +
       '<div class="mi mf"><label>事業所名</label>' +
-        '<div class="frow">' +
-          '<select id="' + pid + '-fsel" onchange="applyFacility(\'' + pid + '\')">' +
-            '<option value="">-- 選択 --</option>' + facOpts +
-          '</select>' +
-          '<input type="text" id="' + pid + '-facility" placeholder="または直接入力" inputmode="latin" oninput="markUnsaved()">' +
-        '</div>' +
+        '<input type="text" id="' + pid + '-facility" list="' + pid + '-fdl" placeholder="入力または選択" inputmode="latin" oninput="markUnsaved()" autocomplete="off" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px;background:#fafafa;font-size:14px;padding:0 10px;outline:none;color:#111">' +
+        '<datalist id="' + pid + '-fdl">' + facOpts + '</datalist>' +
       '</div>' +
       '<div class="mi"><label>点検日</label><div class="av">' + dateStr + '</div></div>' +
       '<div class="mi mf"><label>気温 / 湿度</label>' +
@@ -914,7 +922,7 @@ function buildSolarPage(pid) {
   var pages = document.getElementById('pages');
   var page = document.createElement('div');
   page.className = 'page'; page.id = 'page-' + pid;
-  var kikiFixed = ['高圧ケーブル','LBS(コンデンサ用)','LBS(電灯)','LBS(動力)','PCS','直流ケーブル','パネル'].map(function(k) { return fixedKikiHtml(pid, k); }).join('');
+  var kikiFixed = ['高圧ケーブル','LBS(主遮断用)','LBS(電灯)','LBS(動力)','PCS','直流ケーブル','パネル'].map(function(k) { return fixedKikiHtml(pid, k); }).join('');
   page.innerHTML = announceHtml() +
     sBarHtml(pid, SOLAR_ITEMS.length) +
     '<div class="card"><div class="card-hdr" onclick="toggle(this)">点検項目（全' + SOLAR_ITEMS.length + '項目）<span class="tog">▾</span></div>' +
@@ -952,12 +960,86 @@ function buildSolarPage(pid) {
   pages.appendChild(page);
 }
 
-// ===== 電卓ページ =====
-function buildCalcPage(pid) {
+// ===== 蓄電池ページ =====
+function buildBattPage(pid) {
   var pages = document.getElementById('pages');
   var page = document.createElement('div');
   page.className = 'page'; page.id = 'page-' + pid;
-  page.innerHTML = announceHtml() + '<div class="calc-wrap">' +
+  page.innerHTML = announceHtml() +
+    '<div class="card" style="margin-top:8px"><div class="card-hdr" onclick="toggle(this)">蓄電池設備<span class="tog">▾</span></div>' +
+      '<div class="card-body"><div class="notes-wrap"><label>設備名・設置場所</label>' +
+        '<input type="text" id="' + pid + '-name" placeholder="例: 直流電源装置1号" inputmode="latin" oninput="markUnsaved()" style="width:100%;height:34px;border:1px solid #ddd;border-radius:6px;background:#fafafa;font-size:13px;padding:0 8px;outline:none">' +
+      '</div></div></div>' +
+    '<div style="padding:6px 10px 0;font-size:10px;color:#aaa;text-align:center">数値または「-」（対象外）を入力</div>' +
+    '<div id="' + pid + '-cell-list">' + battCellHtml(pid, 1, true) + '</div>' +
+    '<div style="padding:6px 10px 0"><button class="btn-add" style="width:100%;height:36px;border-color:#00897b;background:#e0f2f1;color:#00897b" onclick="addBattCell(\'' + pid + '\')">＋ セルを追加</button></div>' +
+    '<div class="card" style="margin-top:8px;margin-bottom:6px"><div class="card-hdr" onclick="toggle(this)">記事欄<span class="tog">▾</span></div>' +
+      '<div class="card-body"><div class="notes-wrap"><label>特記事項・処置内容</label>' +
+        '<textarea id="' + pid + '-notes" placeholder="異常内容・処置など" inputmode="latin" oninput="markUnsaved()"></textarea>' +
+      '</div></div></div>';
+  var pg = battPages.find(function(p) { return p.id === pid; });
+  if (pg) pg.cellCount = 1;
+  pages.appendChild(page);
+}
+function battCellHtml(pid, cn, isFirst) {
+  var cid = pid + '-cell-' + cn;
+  var label = '蓄電池' + cn;
+  var del = isFirst ? '' : '<button class="sub-del" style="margin-left:8px" id="' + cid + '-del">✕</button>';
+  return '<div class="card" id="' + cid + '" style="margin-top:8px">' +
+    '<div class="card-hdr" onclick="toggle(this)">' + label + ' <span class="tog">▾</span>' + del + '</div>' +
+    '<div class="card-body">' +
+    '<div class="mrow"><div class="mlabel">温度</div>' + mInp(cid + '-temp') + '<div class="munit">℃</div></div>' +
+    '<div class="mrow"><div class="mlabel">比重</div>' + mInp(cid + '-sg') + '<div class="munit"></div></div>' +
+    '<div class="mrow"><div class="mlabel">電圧</div>' + mInp(cid + '-volt') + '<div class="munit">V</div></div>' +
+    '</div></div>';
+}
+function addBattCell(pid) {
+  var pg = battPages.find(function(p) { return p.id === pid; });
+  if (!pg) return;
+  pg.cellCount = (pg.cellCount || 1) + 1;
+  var cn = pg.cellCount;
+  var wrap = document.createElement('div');
+  wrap.innerHTML = battCellHtml(pid, cn, false);
+  var card = wrap.firstElementChild;
+  var delBtn = card.querySelector('[id$="-del"]');
+  if (delBtn) { delBtn.addEventListener('click', function() { card.remove(); markUnsaved(); }); }
+  document.getElementById(pid + '-cell-list').appendChild(card);
+  markUnsaved();
+}
+
+// ===== 電卓ページ =====
+// ===== ツールページ（電卓・カメラ・ストップウォッチ統合） =====
+function buildToolPage(pid) {
+  var pages = document.getElementById('pages');
+  var page = document.createElement('div');
+  page.className = 'page'; page.id = 'page-' + pid;
+  page.innerHTML = announceHtml() +
+    '<div class="tool-subbar">' +
+      '<div class="tool-subbtn active" id="' + pid + '-sub-calc" onclick="switchToolSub(\'' + pid + '\',\'calc\')">🧮 電卓</div>' +
+      '<div class="tool-subbtn" id="' + pid + '-sub-cam" onclick="switchToolSub(\'' + pid + '\',\'cam\')">📷 カメラ</div>' +
+      '<div class="tool-subbtn" id="' + pid + '-sub-sw" onclick="switchToolSub(\'' + pid + '\',\'sw\')">⏱ ストップウォッチ</div>' +
+    '</div>' +
+    '<div class="tool-pane active" id="' + pid + '-pane-calc">' + calcPaneHtml(pid) + '</div>' +
+    '<div class="tool-pane" id="' + pid + '-pane-cam">' + camPaneHtml(pid) + '</div>' +
+    '<div class="tool-pane" id="' + pid + '-pane-sw">' + swPaneHtml(pid) + '</div>';
+  page._cs = { cur:'0', op:null, prev:null, reset:false, expr:'' };
+  camPhotos[pid] = [];
+  swState[pid] = { running:false, startTs:0, elapsed:0, laps:[], timer:null };
+  pages.appendChild(page);
+}
+function switchToolSub(pid, sub) {
+  ['calc','cam','sw'].forEach(function(s) {
+    var btn = document.getElementById(pid + '-sub-' + s);
+    var pane = document.getElementById(pid + '-pane-' + s);
+    if (btn) btn.classList.toggle('active', s === sub);
+    if (pane) pane.classList.toggle('active', s === sub);
+  });
+  if (sub !== 'cam' && camStreams[pid]) { stopCam(pid); }
+}
+
+// --- 電卓 ---
+function calcPaneHtml(pid) {
+  return '<div class="calc-wrap">' +
     '<div class="calc-disp"><div class="calc-expr" id="' + pid + '-expr"></div><div class="calc-val" id="' + pid + '-val">0</div></div>' +
     '<div class="calc-grid">' +
     mkCB('AC','cb-clr','calcAC(\''+pid+'\')')+mkCB('+/−','cb-fn','calcSign(\''+pid+'\')')+mkCB('%','cb-fn','calcPct(\''+pid+'\')')+mkCB('÷','cb-op','calcOp(\''+pid+'\',\'/\')')+
@@ -966,8 +1048,6 @@ function buildCalcPage(pid) {
     mkCB('1','cb-n','calcNum(\''+pid+'\',1)')+mkCB('2','cb-n','calcNum(\''+pid+'\',2)')+mkCB('3','cb-n','calcNum(\''+pid+'\',3)')+mkCB('＋','cb-op','calcOp(\''+pid+'\',\'+\')')+
     '<button class="calc-btn cb-n" style="grid-column:span 2" onclick="calcNum(\''+pid+'\',0)">0</button>'+mkCB('.','cb-fn','calcDot(\''+pid+'\')')+mkCB('＝','cb-eq','calcEq(\''+pid+'\')')+
     '</div></div>';
-  page._cs = { cur:'0', op:null, prev:null, reset:false, expr:'' };
-  pages.appendChild(page);
 }
 function mkCB(lbl, cls, onclick) {
   return '<button class="calc-btn ' + cls + '" onclick="' + onclick + '">' + lbl + '</button>';
@@ -997,22 +1077,17 @@ function calcPct(pid){var s=cs(pid);s.cur=String(parseFloat(s.cur)/100);cd(pid);
 function evalOp(a,b,op){if(op==='/') return b!==0?a/b:0;if(op==='*')return a*b;if(op==='+')return a+b;return a-b;}
 function opSym(op){if(op==='/')return '÷';if(op==='*')return '×';if(op==='-')return '−';return '＋';}
 
-// ===== カメラページ =====
-function buildCamPage(pid) {
-  var pages = document.getElementById('pages');
-  var page = document.createElement('div');
-  page.className = 'page'; page.id = 'page-' + pid;
-  page.innerHTML = announceHtml() + '<div class="cam-wrap">' +
+// --- カメラ ---
+function camPaneHtml(pid) {
+  return '<div class="cam-wrap">' +
     '<div class="cam-bar">' +
-      '<button class="cam-btn" onclick="startCam(\'' + pid + '\')">📷 カメラ起動</button>' +
-      '<button class="cam-btn" onclick="takePhoto(\'' + pid + '\')">🔴 撮影</button>' +
-      '<button class="cam-btn red" onclick="stopCam(\'' + pid + '\')">■ 停止</button>' +
+      '<button class="cam-btn" onclick="startCam(\''+pid+'\')">📷 カメラ起動</button>' +
+      '<button class="cam-btn" onclick="takePhoto(\''+pid+'\')">🔴 撮影</button>' +
+      '<button class="cam-btn red" onclick="stopCam(\''+pid+'\')">■ 停止</button>' +
     '</div>' +
     '<video id="' + pid + '-video" class="cam-prev" autoplay playsinline style="display:none"></video>' +
     '<div id="' + pid + '-gallery" class="cam-gallery"><div class="cam-empty">撮影した写真がここに表示されます</div></div>' +
     '</div>';
-  camPhotos[pid] = [];
-  pages.appendChild(page);
 }
 function startCam(pid) {
   navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
@@ -1061,6 +1136,89 @@ function viewPhoto(src) {
   img.style.cssText = 'max-width:95vw;max-height:95vh;border-radius:8px';
   ov.appendChild(img); ov.onclick = function() { document.body.removeChild(ov); };
   document.body.appendChild(ov);
+}
+
+// --- ストップウォッチ ---
+function swPaneHtml(pid) {
+  return '<div class="sw-wrap">' +
+    '<div class="sw-display" id="' + pid + '-sw-time">00:00</div>' +
+    '<div class="sw-ms" id="' + pid + '-sw-ms">.00</div>' +
+    '<div class="sw-btns">' +
+      '<button class="sw-btn reset" id="' + pid + '-sw-reset" onclick="swReset(\''+pid+'\')" disabled>リセット</button>' +
+      '<button class="sw-btn start" id="' + pid + '-sw-start" onclick="swStart(\''+pid+'\')">開始</button>' +
+      '<button class="sw-btn lap" id="' + pid + '-sw-lap" onclick="swLap(\''+pid+'\')" disabled>ラップ</button>' +
+    '</div>' +
+    '<div class="sw-laps" id="' + pid + '-sw-laps"></div>' +
+    '</div>';
+}
+function swFormat(ms) {
+  var totalSec = Math.floor(ms / 1000);
+  var mm = String(Math.floor(totalSec / 60));
+  if (mm.length < 2) mm = '0' + mm;
+  var ss = String(totalSec % 60);
+  if (ss.length < 2) ss = '0' + ss;
+  var cs2 = String(Math.floor((ms % 1000) / 10));
+  if (cs2.length < 2) cs2 = '0' + cs2;
+  return { main: mm + ':' + ss, ms: '.' + cs2 };
+}
+function swTick(pid) {
+  var st = swState[pid]; if (!st || !st.running) return;
+  var now = Date.now();
+  var elapsed = st.elapsed + (now - st.startTs);
+  var f = swFormat(elapsed);
+  var te = document.getElementById(pid + '-sw-time');
+  var me = document.getElementById(pid + '-sw-ms');
+  if (te) te.textContent = f.main;
+  if (me) me.textContent = f.ms;
+}
+function swStart(pid) {
+  var st = swState[pid]; if (!st) return;
+  if (st.running) return;
+  st.running = true;
+  st.startTs = Date.now();
+  st.timer = setInterval(function() { swTick(pid); }, 30);
+  var startBtn = document.getElementById(pid + '-sw-start');
+  var lapBtn = document.getElementById(pid + '-sw-lap');
+  var resetBtn = document.getElementById(pid + '-sw-reset');
+  if (startBtn) { startBtn.textContent = '停止'; startBtn.className = 'sw-btn stop'; startBtn.onclick = function() { swStop(pid); }; }
+  if (lapBtn) lapBtn.disabled = false;
+  if (resetBtn) resetBtn.disabled = true;
+}
+function swStop(pid) {
+  var st = swState[pid]; if (!st || !st.running) return;
+  st.elapsed += Date.now() - st.startTs;
+  st.running = false;
+  if (st.timer) { clearInterval(st.timer); st.timer = null; }
+  var startBtn = document.getElementById(pid + '-sw-start');
+  var lapBtn = document.getElementById(pid + '-sw-lap');
+  var resetBtn = document.getElementById(pid + '-sw-reset');
+  if (startBtn) { startBtn.textContent = '再開'; startBtn.className = 'sw-btn start'; startBtn.onclick = function() { swStart(pid); }; }
+  if (lapBtn) lapBtn.disabled = true;
+  if (resetBtn) resetBtn.disabled = false;
+}
+function swReset(pid) {
+  var st = swState[pid]; if (!st) return;
+  st.elapsed = 0; st.laps = [];
+  var te = document.getElementById(pid + '-sw-time');
+  var me = document.getElementById(pid + '-sw-ms');
+  if (te) te.textContent = '00:00';
+  if (me) me.textContent = '.00';
+  var lapsEl = document.getElementById(pid + '-sw-laps');
+  if (lapsEl) lapsEl.innerHTML = '';
+  var resetBtn = document.getElementById(pid + '-sw-reset');
+  if (resetBtn) resetBtn.disabled = true;
+}
+function swLap(pid) {
+  var st = swState[pid]; if (!st || !st.running) return;
+  var elapsed = st.elapsed + (Date.now() - st.startTs);
+  st.laps.push(elapsed);
+  var lapsEl = document.getElementById(pid + '-sw-laps');
+  if (!lapsEl) return;
+  var f = swFormat(elapsed);
+  var row = document.createElement('div');
+  row.className = 'sw-lap-row';
+  row.innerHTML = '<span class="lap-num">ラップ ' + st.laps.length + '</span><span>' + f.main + f.ms + '</span>';
+  lapsEl.insertBefore(row, lapsEl.firstChild);
 }
 
 // ===== データ収集 =====
@@ -1140,8 +1298,18 @@ function collectAll() {
     });
     return { id:pid, label:pg.label, judgments:Object.assign({},pg.jState), vr:getV(pid+'-vr'), vs:getV(pid+'-vs'), vt:getV(pid+'-vt'), ar:getV(pid+'-ar'), as:getV(pid+'-as'), at:getV(pid+'-at'), power:getV(pid+'-power'), transformers:trs, kiki:kikis, notes:getV(pid+'-notes') };
   });
+  var batt = battPages.map(function(pg) {
+    var pid = pg.id;
+    var cells = [];
+    document.querySelectorAll('#page-' + pid + ' #' + pid + '-cell-list .card').forEach(function(card) {
+      var cid = card.id;
+      var lbl = (card.querySelector('.card-hdr') || {}).childNodes ? card.querySelector('.card-hdr').childNodes[0].textContent.trim() : cid;
+      cells.push({ label: lbl, temp: getV(cid + '-temp'), sg: getV(cid + '-sg'), volt: getV(cid + '-volt') });
+    });
+    return { id: pid, label: pg.label, name: getV(pid + '-name'), cells: cells, notes: getV(pid + '-notes') };
+  });
   var facility = elecPages.length ? (getV(elecPages[0].id + '-facility') || '未設定') : '未設定';
-  return { date:dateStr, inspector:currentUser, facilityName:facility, elec:elec, gen:gen, solar:solar, savedAt:new Date().toISOString() };
+  return { date:dateStr, inspector:currentUser, facilityName:facility, elec:elec, gen:gen, solar:solar, batt:batt, savedAt:new Date().toISOString() };
 }
 
 // ===== CSV =====
@@ -1189,6 +1357,12 @@ function buildCSV(d) {
     }
     csv += '\n高圧機器\n種別,温度(℃)\n';
     pg.kiki.forEach(function(k) { csv += k.type + ',' + k.tmp + '\n'; });
+    csv += '\n記事欄\n' + pg.notes + '\n\n';
+  });
+  d.batt.forEach(function(pg) {
+    csv += '【' + pg.label + '】設備名: ' + pg.name + '\n\n';
+    csv += 'セル,温度(℃),比重,電圧(V)\n';
+    pg.cells.forEach(function(c) { csv += c.label + ',' + c.temp + ',' + c.sg + ',' + c.volt + '\n'; });
     csv += '\n記事欄\n' + pg.notes + '\n\n';
   });
   return { csv: csv, fname: fname };
@@ -1602,6 +1776,18 @@ function buildDetailHtml(data) {
       out += '<div style="font-size:11px;color:#555;white-space:pre-wrap;background:#f7f9fc;padding:6px 8px;border-radius:6px;border:1px solid #e8eaf0">' + escHtml(pg.notes) + '</div>';
     }
   });
+  // 蓄電池
+  (data.batt||[]).forEach(function(pg) {
+    out += '<div style="background:#00897b;color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;font-weight:700;margin:10px 0 4px">🔋 ' + escHtml(pg.label||'') + (pg.name?'　'+escHtml(pg.name):'') + '</div>';
+    (pg.cells||[]).forEach(function(c) {
+      out += secHead(escHtml(c.label||'蓄電池'));
+      out += detRow('温度', c.temp, '℃') + detRow('比重', c.sg, '') + detRow('電圧', c.volt, 'V');
+    });
+    if (pg.notes && pg.notes !== '-') {
+      out += secHead('記事欄');
+      out += '<div style="font-size:11px;color:#555;white-space:pre-wrap;background:#f7f9fc;padding:6px 8px;border-radius:6px">' + escHtml(pg.notes) + '</div>';
+    }
+  });
   return out || '<div style="font-size:11px;color:#aaa">データなし</div>';
 }
 
@@ -1855,6 +2041,7 @@ function numpadInput(ch) {
   else if (ch === '.') { if (!cur.includes('.')) cur += '.'; }
   else { if (cur === '0') cur = ch; else cur += ch; }
   numpadTarget.value = cur;
+  numpadTarget.classList.toggle('is-dash', cur === '-');
   var v = document.getElementById('numpad-val');
   if (v) v.textContent = cur || '-';
   markUnsaved();
@@ -1882,9 +2069,8 @@ function closeNumpad() {
   var ov = document.getElementById('numpad-overlay');
   if (ov) document.body.removeChild(ov);
   if (numpadTarget) {
-    // 空の場合は'-'をセット
     if (numpadTarget.value === '') numpadTarget.value = '-';
-    // 力率同期など関連処理を発火
+    numpadTarget.classList.toggle('is-dash', numpadTarget.value === '-');
     var ev = document.createEvent('Event');
     ev.initEvent('change', true, true);
     numpadTarget.dispatchEvent(ev);
@@ -1905,9 +2091,12 @@ function showAutoBadge() {
 
 // ===== ページロード時にセッション復元・リフレッシュ対応 =====
 // リフレッシュ前に自動保存
-window.addEventListener('beforeunload', function() {
-  if (unsaved && currentUser) {
-    try { autoSave(); } catch(e) {}
+window.addEventListener('beforeunload', function(e) {
+  if (currentUser) {
+    if (unsaved) { try { autoSave(); } catch(err) {} }
+    e.preventDefault();
+    e.returnValue = '入力内容が保存されていない可能性があります。ページを更新しますか？';
+    return e.returnValue;
   }
 });
 
