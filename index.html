@@ -321,18 +321,13 @@ function handleDriveBtn() {
 // showDriveLoginModal / startDriveAuth: GAS方式では不要
 function saveToDrive(csv, fname) {
   if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) return Promise.resolve(false);
-  // GASはCORSヘッダを返せないためno-corsで送信（レスポンスは読めないがGAS側は実行される）
   return fetch(GAS_URL, {
     method: 'POST',
     mode: 'no-cors',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'saveCSV', fileName: fname, csvContent: csv })
-  }).then(function() {
-    return true; // no-corsではレスポンス読めないが送信成功とみなす
-  }).catch(function(e) {
-    console.error('saveToDrive error:', e);
-    return false;
-  });
+    body: JSON.stringify({ action: 'saveCSV', fileName: fname, csvContent: csv, userName: currentUser })
+  }).then(function() { return true; })
+    .catch(function(e) { console.error('saveToDrive error:', e); return false; });
 }
 
 // ===== タブ =====
@@ -1353,56 +1348,115 @@ function setHistUI(mode, msg) {
 
 
 
-function loadDriveHistory() {
+function showUserSelector() {
+  if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) { showToast('GAS URLが未設定です', 'warn'); return; }
+  fetch(GAS_URL + '?action=getUserList')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var users = (data.users || []);
+      if (!users.length) { showToast('ユーザー一覧を取得できませんでした', 'warn'); return; }
+      var ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center';
+      var box = document.createElement('div');
+      box.style.cssText = 'background:#fff;border-radius:14px;width:300px;max-width:90vw;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.2);max-height:80vh;display:flex;flex-direction:column';
+      var hdr = document.createElement('div');
+      hdr.style.cssText = 'background:#1d3a6e;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;flex-shrink:0';
+      hdr.textContent = '参照するユーザーを選択';
+      box.appendChild(hdr);
+      var scroll = document.createElement('div');
+      scroll.style.cssText = 'overflow-y:auto;flex:1';
+      users.forEach(function(u) {
+        var item = document.createElement('div');
+        item.style.cssText = 'padding:13px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:10px';
+        item.innerHTML = '<span style="font-size:18px">👤</span><span>' + escHtml(u) + (u === currentUser ? ' <span style="font-size:11px;color:#1d3a6e;font-weight:700">(自分)</span>' : '') + '</span>';
+        item.onclick = function() { document.body.removeChild(ov); loadDriveHistory(u); };
+        scroll.appendChild(item);
+      });
+      box.appendChild(scroll);
+      var cancel = document.createElement('div');
+      cancel.style.cssText = 'padding:13px 16px;text-align:center;cursor:pointer;font-size:13px;color:#888;border-top:1px solid #f0f0f0;flex-shrink:0';
+      cancel.textContent = 'キャンセル';
+      cancel.onclick = function() { document.body.removeChild(ov); };
+      box.appendChild(cancel);
+      ov.appendChild(box);
+      ov.onclick = function(e) { if (e.target === ov) document.body.removeChild(ov); };
+      document.body.appendChild(ov);
+    })
+    .catch(function() { showToast('ユーザー一覧の取得に失敗しました', 'err'); });
+}
+
+function loadDriveHistory(targetUser) {
   if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) {
-    showToast('GAS URLが未設定です', 'warn'); return;
+    showToast('GAS URLが未設定です', 'warn');
+    loadLocalHistory(); return;
   }
-  setHistUI('drive', 'Driveから読み込み中...');
-  fetch(GAS_URL + '?action=getHistory')
+  var user = targetUser || currentUser;
+  setHistUI('drive', user + ' のDriveデータ読み込み中...');
+  var list = document.getElementById('hist-list');
+  if (list) list.innerHTML = '<div class="hist-empty">Driveから読み込み中...</div>';
+  fetch(GAS_URL + '?action=getHistory&user=' + encodeURIComponent(currentUser) + '&targetUser=' + encodeURIComponent(user))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (!data.ok) { showToast('取得失敗: ' + (data.message||''), 'err'); return; }
       var files = data.files || [];
-      if (!files.length) { showToast('Driveに保存済みファイルが見つかりません', 'warn'); renderDriveList([]); return; }
-      showToast(files.length + '件のファイルを取得しました', 'ok');
-      setHistUI('drive', 'Google Driveの記録（' + files.length + '件）');
-      renderDriveList(files);
+      setHistUI('drive', user + ' の記録（' + files.length + '件）');
+      if (!files.length) { showToast('Driveにファイルが見つかりません', 'warn'); renderDriveList([], user); return; }
+      showToast(files.length + '件取得しました', 'ok');
+      renderDriveList(files, user);
     })
-    .catch(function() { showToast('Drive一覧の取得に失敗しました\nGAS URLを確認してください', 'err'); });
+    .catch(function(e) {
+      console.error('Drive history error:', e);
+      setHistUI('drive', 'Drive接続エラー');
+      var lst = document.getElementById('hist-list');
+      if (lst) lst.innerHTML = '<div class="hist-empty">Drive読込失敗。端末から読込をお試しください。</div>';
+      showToast('Drive一覧の取得に失敗しました', 'err');
+    });
 }
 function renderHistList(hist, source) {
   var list = document.getElementById('hist-list');
   if (!list) return;
   if (!hist.length) { list.innerHTML = '<div class="hist-empty">' + source + 'に保存済みの記録がありません</div>'; return; }
-  list.innerHTML = '<div style="padding:6px 14px;font-size:10px;color:#aaa">' + source + '（' + hist.length + '件） — タップで詳細表示</div>';
+  var headerDiv = '<div style="padding:6px 14px;font-size:10px;color:#aaa">' + escHtml(source) + '（' + hist.length + '件） — タップでプレビュー表示</div>';
+  list.innerHTML = headerDiv;
   hist.forEach(function(h, i) {
     var div = document.createElement('div'); div.className = 'hist-item';
-    div.innerHTML =
-      '<div class="hist-name">📋 ' + escHtml(h.facility || '未設定') + '</div>' +
-      '<div class="hist-meta">' + escHtml(h.date || '') + ' ／ ' + escHtml(h.inspector || '不明') + ' ／ ' + (h.savedAt || '').slice(0, 16).replace('T', ' ') + '</div>' +
-      '<div class="hist-detail" id="hd' + i + '"></div>';
-    (function(h) {
-      div.onclick = function() {
-        // まずkeyで検索、なければ日付ベースのキーで再検索
-        var stored = h.key ? store_get(h.key) : null;
-        if (!stored && h.date) {
-          // 日付からキーを生成して再検索
-          var altKey = 'tenken-' + (h.savedAt||'').slice(0,10).replace(/-/g,'');
+    div.style.display = 'flex'; div.style.alignItems = 'center'; div.style.gap = '8px';
+    div.style.padding = '10px 14px'; div.style.borderBottom = '1px solid #f0f0f0';
+    var infoEl = document.createElement('div'); infoEl.style.flex = '1';
+    infoEl.innerHTML = '<div class="hist-name">📋 ' + escHtml(h.facility || '未設定') + '</div>' +
+      '<div class="hist-meta">' + escHtml(h.date || '') + ' ／ ' + escHtml(h.inspector || '不明') + ' ／ ' + (h.savedAt || '').slice(0, 16).replace('T', ' ') + '</div>';
+    var delBtnL = document.createElement('button');
+    delBtnL.style.cssText = 'width:32px;height:32px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-size:14px;cursor:pointer;flex-shrink:0';
+    delBtnL.textContent = '🗑';
+    delBtnL.title = '端末から削除';
+    div.appendChild(infoEl);
+    div.appendChild(delBtnL);
+    (function(hh, row, infoElement, delButton) {
+      infoElement.style.cursor = 'pointer';
+      infoElement.onclick = function() {
+        var stored = hh.key ? store_get(hh.key) : null;
+        if (!stored && hh.date) {
+          var altKey = 'tenken-' + (hh.savedAt||'').slice(0,10).replace(/-/g,'');
           stored = store_get(altKey);
         }
         if (stored) {
-          try {
-            var data = JSON.parse(stored.value);
-            showLocalPreview(h, data);
-          } catch(e) {
-            showToast('データの読み込みに失敗しました', 'err');
-          }
-        } else {
-          // データが端末にない場合はsummaryだけ表示
-          showLocalPreviewSummary(h);
-        }
+          try { var data = JSON.parse(stored.value); showLocalPreview(hh, data); }
+          catch(e) { showToast('データの読み込みに失敗しました', 'err'); }
+        } else { showLocalPreviewSummary(hh); }
       };
-    })(h);
+      delButton.onclick = function(e) {
+        e.stopPropagation();
+        if (!confirm('「' + (hh.facility||'この記録') + '」を端末から削除しますか？')) return;
+        try { localStorage.removeItem(hh.key); } catch(ex) {}
+        var histData = [];
+        var hr = store_get('tenken-history');
+        if (hr) { try { histData = JSON.parse(hr.value); } catch(ex) {} }
+        histData = histData.filter(function(x) { return x.key !== hh.key; });
+        store_set('tenken-history', JSON.stringify(histData));
+        row.remove();
+        showToast('端末から削除しました', 'ok');
+      };
+    })(h, div, infoEl, delBtnL);
     list.appendChild(div);
   });
 }
@@ -1561,25 +1615,50 @@ function detRow(label, val, unit) {
     '<span style="font-size:12px;color:#222;font-weight:500">' + escHtml(val) + ' <span style="font-size:10px;color:#888">' + escHtml(unit) + '</span></span>' +
     '</div>';
 }
-function renderDriveList(files) {
+function renderDriveList(files, targetUser) {
   var list = document.getElementById('hist-list');
   if (!list) return;
-  if (!files.length) { list.innerHTML = '<div class="hist-empty">Google Driveに保存済みファイルが見つかりません</div>'; return; }
-  list.innerHTML = '<div style="padding:6px 14px;font-size:10px;color:#aaa">Google Drive（' + files.length + '件） — タップしてCSVをダウンロード</div>';
+  var header = document.createElement('div');
+  header.style.cssText = 'padding:8px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e8eaf0';
+  header.innerHTML = '<span style="font-size:10px;color:#aaa;flex:1">Google Drive（' + files.length + '件）</span>' +
+    '<button onclick="showUserSelector()" style="height:26px;padding:0 10px;border-radius:6px;border:1px solid #1d3a6e;background:#f0f4ff;color:#1d3a6e;font-size:10px;font-weight:700;cursor:pointer">👥 ユーザー切替</button>';
+  list.innerHTML = '';
+  list.appendChild(header);
+  if (!files.length) {
+    var empty = document.createElement('div'); empty.className = 'hist-empty';
+    empty.textContent = 'このフォルダにデータがありません';
+    list.appendChild(empty); return;
+  }
   files.forEach(function(f) {
     var parts = f.name.replace('.csv', '').split('_');
     var raw = parts[0] || '';
     var date = raw.length === 8 ? raw.slice(0,4) + '年' + raw.slice(4,6) + '月' + raw.slice(6,8) + '日' : raw;
-    var facility = parts[1] || '';
-    var inspector = parts[2] || '';
+    var facility = parts[1] || ''; var inspector = parts[2] || '';
     var size = f.size ? Math.round(f.size / 1024) + 'KB' : '';
     var div = document.createElement('div'); div.className = 'hist-item';
-    div.innerHTML = '<div class="hist-name">☁️ ' + (facility || f.name) + '</div>' +
-      '<div class="hist-meta">' + date + (inspector ? ' ／ ' + inspector : '') + (size ? ' ／ ' + size : '') + ' ／ ' + (f.createdTime || '').slice(0, 10) + '</div>' +
-      '<div style="font-size:10px;color:#1d3a6e;margin-top:3px">📥 タップしてCSVをダウンロード</div>';
-    (function(fid, fname) {
-      div.onclick = function() { downloadDriveFile(fid, fname); };
-    })(f.id, f.name);
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #f0f0f0';
+    var info = document.createElement('div'); info.style.flex = '1';
+    info.innerHTML = '<div class="hist-name">☁️ ' + (facility || f.name) + '</div>' +
+      '<div class="hist-meta">' + date + (inspector ? ' ／ ' + inspector : '') + (size ? ' ／ ' + size : '') + '</div>';
+    var delBtn = document.createElement('button');
+    delBtn.style.cssText = 'width:32px;height:32px;border-radius:8px;border:none;background:#ffebee;color:#c62828;font-size:14px;cursor:pointer;flex-shrink:0';
+    delBtn.textContent = '🗑';
+    delBtn.title = '削除';
+    (function(fid, fname, row) {
+      info.onclick = function() { downloadDriveFile(fid, fname); };
+      delBtn.onclick = function(e) {
+        e.stopPropagation();
+        if (!confirm('「' + fname + '」をDriveから削除しますか？')) return;
+        fetch(GAS_URL + '?action=deleteFile&fileId=' + encodeURIComponent(fid))
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            if (d.ok) { row.remove(); showToast('削除しました', 'ok'); }
+            else { showToast('削除失敗: ' + (d.message||''), 'err'); }
+          })
+          .catch(function() { showToast('削除に失敗しました', 'err'); });
+      };
+    })(f.id, f.name, div);
+    div.appendChild(info); div.appendChild(delBtn);
     list.appendChild(div);
   });
 }
