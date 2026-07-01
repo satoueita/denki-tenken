@@ -1734,7 +1734,7 @@ function renderHistList(hist, source) {
     div.appendChild(delBtnL);
     (function(hh, row, infoElement, delButton) {
       infoElement.style.cursor = 'pointer';
-      infoElement.onclick = function() {
+      var openPreview = function() {
         var stored = hh.key ? store_get(hh.key) : null;
         if (!stored && hh.date) {
           var altKey = 'tenken-' + (hh.savedAt||'').slice(0,10).replace(/-/g,'');
@@ -1745,6 +1745,8 @@ function renderHistList(hist, source) {
           catch(e) { showToast('データの読み込みに失敗しました', 'err'); }
         } else { showLocalPreviewSummary(hh); }
       };
+      infoElement.onclick = openPreview;
+      infoElement.ontouchstart = function(e) { e.stopPropagation(); openPreview(); };
       delButton.onclick = function(e) {
         e.stopPropagation();
         if (!confirm('「' + (hh.facility||'この記録') + '」を端末から削除しますか？')) return;
@@ -1958,7 +1960,9 @@ function renderDriveList(files, targetUser) {
     delBtn.textContent = '🗑';
     delBtn.title = '削除';
     (function(fid, fname, row) {
+      info.style.cursor = 'pointer';
       info.onclick = function() { downloadDriveFile(fid, fname); };
+      info.ontouchstart = function(e) { e.stopPropagation(); downloadDriveFile(fid, fname); };
       delBtn.onclick = function(e) {
         e.stopPropagation();
         if (!confirm('「' + fname + '」をDriveから削除しますか？')) return;
