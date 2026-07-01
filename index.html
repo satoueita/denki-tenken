@@ -548,22 +548,32 @@ function loadAnnounce() {
 function getWeather(pid) {
   if (!navigator.geolocation) { showToast('位置情報が使えません', 'warn'); return; }
   showToast('位置情報を取得中...', 'ok');
-  navigator.geolocation.getCurrentPosition(function(pos) {
-    var lat = pos.coords.latitude, lon = pos.coords.longitude;
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,relativehumidity_2m&timezone=Asia%2FTokyo')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        var temp = data.current.temperature_2m;
-        var hum = data.current.relativehumidity_2m;
-        var ti = document.getElementById(pid + '-temp');
-        var hi = document.getElementById(pid + '-hum');
-        if (ti) { ti.value = temp; ti.classList.add('af'); }
-        if (hi) { hi.value = hum; hi.classList.add('af'); }
-        markUnsaved();
-        showToast('気温: ' + temp + '°C　湿度: ' + hum + '%', 'ok');
-      })
-      .catch(function() { showToast('気温・湿度の取得に失敗しました', 'err'); });
-  }, function() { showToast('位置情報の取得に失敗しました', 'err'); });
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      var lat = pos.coords.latitude, lon = pos.coords.longitude;
+      fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,relativehumidity_2m&timezone=Asia%2FTokyo')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var temp = data.current.temperature_2m;
+          var hum = data.current.relativehumidity_2m;
+          var ti = document.getElementById(pid + '-temp');
+          var hi = document.getElementById(pid + '-hum');
+          if (ti) { ti.value = temp; ti.classList.add('af'); ti.classList.remove('is-dash'); }
+          if (hi) { hi.value = hum; hi.classList.add('af'); hi.classList.remove('is-dash'); }
+          markUnsaved();
+          showToast('気温: ' + temp + '°C　湿度: ' + hum + '%', 'ok');
+        })
+        .catch(function() { showToast('気温・湿度の取得に失敗しました', 'err'); });
+    },
+    function(err) {
+      var msg = '位置情報の取得に失敗しました';
+      if (err.code === 1) msg = '位置情報の使用が許可されていません\n設定→Safari→位置情報を確認してください';
+      else if (err.code === 2) msg = '位置情報を取得できませんでした';
+      else if (err.code === 3) msg = '位置情報の取得がタイムアウトしました';
+      showToast(msg, 'err');
+    },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+  );
 }
 
 // ===== 電力自動計算 =====
@@ -749,8 +759,8 @@ function buildElecPage(pid) {
       '<div class="mi"><label>点検日</label><div class="av">' + dateStr + '</div></div>' +
       '<div class="mi mf"><label>気温 / 湿度</label>' +
         '<div class="wrow">' +
-          '<input type="text" inputmode="decimal" id="' + pid + '-temp" placeholder="気温(°C)" oninput="markUnsaved()">' +
-          '<input type="text" inputmode="decimal" id="' + pid + '-hum" placeholder="湿度(%)" oninput="markUnsaved()">' +
+          '<input class="minp" type="text" id="' + pid + '-temp" placeholder="気温" style="flex:1" readonly onfocus="openNumpad(this)" onclick="openNumpad(this)">' +
+          '<input class="minp" type="text" id="' + pid + '-hum" placeholder="湿度" style="flex:1" readonly onfocus="openNumpad(this)" onclick="openNumpad(this)">' +
           '<button onclick="getWeather(\'' + pid + '\')">📍 自動</button>' +
         '</div>' +
       '</div>' +
@@ -766,7 +776,7 @@ function buildElecPage(pid) {
       '<div class="mrow"><div class="mlabel">有効電力量</div>' + mInp(pid + '-k1-eff') + '<div class="munit">kW</div></div>' +
       '<div class="mrow"><div class="mlabel">無効電力量</div>' + mInp(pid + '-k1-react') + '<div class="munit">kW</div></div>' +
       '<div class="mrow"><div class="mlabel">力率</div>' +
-        '<input class="minp" type="text" inputmode="decimal" id="' + pid + '-k1-pf" placeholder="-" oninput="syncPf(\'' + pid + '\');markUnsaved()">' +
+        '<input class="minp" type="text" id="' + pid + '-k1-pf" placeholder="-" readonly onfocus="openNumpad(this)" onclick="openNumpad(this)" data-extra="syncPf(\'' + pid + '\')"> ' +
         '<div class="munit">%</div></div>' +
       '<div class="mrow"><div class="mlabel">最大需要電力</div>' + mInp(pid + '-k1-maxd') + '<div class="munit">kW</div></div>' +
       '<div class="mrow"><div class="mlabel">累計最大電力</div>' + mInp(pid + '-k1-cumax') + '<div class="munit">kW</div></div>' +
@@ -794,13 +804,13 @@ function buildElecPage(pid) {
       '<div class="hint-bar">数値または「-」（対象外）を入力</div>' +
       '<div class="mgl">電圧</div>' +
       '<div class="mrow"><div class="mlabel">電圧 R相</div>' +
-        '<input class="minp" type="text" inputmode="decimal" id="' + pid + '-vr" placeholder="-" oninput="calcPower(\'' + pid + '\');markUnsaved()">' +
+        '<input class="minp" type="text" id="' + pid + '-vr" placeholder="-" readonly onfocus="openNumpad(this)" onclick="openNumpad(this)" data-extra="calcPower(\'' + pid + '\')"> ' +
         '<div class="munit">kV</div></div>' +
       '<div class="mrow"><div class="mlabel">電圧 S相</div>' + mInp(pid + '-vs') + '<div class="munit">kV</div></div>' +
       '<div class="mrow"><div class="mlabel">電圧 T相</div>' + mInp(pid + '-vt') + '<div class="munit">kV</div></div>' +
       '<div class="mgl">電流</div>' +
       '<div class="mrow"><div class="mlabel">電流 R相</div>' +
-        '<input class="minp" type="text" inputmode="decimal" id="' + pid + '-ar" placeholder="-" oninput="calcPower(\'' + pid + '\');markUnsaved()">' +
+        '<input class="minp" type="text" id="' + pid + '-ar" placeholder="-" readonly onfocus="openNumpad(this)" onclick="openNumpad(this)" data-extra="calcPower(\'' + pid + '\')"> ' +
         '<div class="munit">A</div></div>' +
       '<div class="mrow"><div class="mlabel">電流 S相</div>' + mInp(pid + '-as') + '<div class="munit">A</div></div>' +
       '<div class="mrow"><div class="mlabel">電流 T相</div>' + mInp(pid + '-at') + '<div class="munit">A</div></div>' +
@@ -963,11 +973,11 @@ function buildSolarPage(pid) {
     '<div class="card"><div class="card-hdr" onclick="toggle(this)">電圧・電流（高圧）<span class="tog">▾</span></div><div class="card-body">' +
       '<div class="hint-bar">数値または「-」（対象外）を入力</div>' +
       '<div class="mgl">電圧</div>' +
-      '<div class="mrow"><div class="mlabel">電圧 R相</div><input class="minp" type="text" inputmode="decimal" id="' + pid + '-vr" placeholder="-" oninput="calcPower(\'' + pid + '\');markUnsaved()"><div class="munit">kV</div></div>' +
+      '<div class="mrow"><div class="mlabel">電圧 R相</div><input class="minp" type="text" id="' + pid + '-vr" placeholder="-" readonly onfocus="openNumpad(this)" onclick="openNumpad(this)" data-extra="calcPower(\'' + pid + '\')" ><div class="munit">kV</div></div>' +
       '<div class="mrow"><div class="mlabel">電圧 S相</div>' + mInp(pid + '-vs') + '<div class="munit">kV</div></div>' +
       '<div class="mrow"><div class="mlabel">電圧 T相</div>' + mInp(pid + '-vt') + '<div class="munit">kV</div></div>' +
       '<div class="mgl">電流</div>' +
-      '<div class="mrow"><div class="mlabel">電流 R相</div><input class="minp" type="text" inputmode="decimal" id="' + pid + '-ar" placeholder="-" oninput="calcPower(\'' + pid + '\');markUnsaved()"><div class="munit">A</div></div>' +
+      '<div class="mrow"><div class="mlabel">電流 R相</div><input class="minp" type="text" id="' + pid + '-ar" placeholder="-" readonly onfocus="openNumpad(this)" onclick="openNumpad(this)" data-extra="calcPower(\'' + pid + '\')" ><div class="munit">A</div></div>' +
       '<div class="mrow"><div class="mlabel">電流 S相</div>' + mInp(pid + '-as') + '<div class="munit">A</div></div>' +
       '<div class="mrow"><div class="mlabel">電流 T相</div>' + mInp(pid + '-at') + '<div class="munit">A</div></div>' +
       '<div class="mgl">電力（自動計算）</div>' +
@@ -1142,23 +1152,33 @@ function takePhoto(pid) {
   var canvas = document.createElement('canvas');
   canvas.width = v.videoWidth; canvas.height = v.videoHeight;
   canvas.getContext('2d').drawImage(v, 0, 0);
-  camPhotos[pid].push(canvas.toDataURL('image/jpeg', 0.85));
+  var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  // メモリに追加（保存は💾ボタン押下時）
+  camPhotos[pid].push({ dataUrl: dataUrl, saved: false });
   renderGallery(pid);
-  showToast('撮影しました', 'ok');
+  markUnsaved();
+  showToast('撮影しました（💾保存で端末・Driveに保存）', 'ok');
 }
 function renderGallery(pid) {
   var g = document.getElementById(pid + '-gallery');
   if (!g) return;
   var photos = camPhotos[pid] || [];
-  if (!photos.length) { g.innerHTML = '<div class="cam-empty">撮影した写真がここに表示されます</div>'; return; }
+  if (!photos.length) { g.innerHTML = '<div class="cam-empty">撮影した写真がここに表示されます<br><span style="font-size:10px;color:#aaa">💾 保存ボタンで端末・Driveに保存されます</span></div>'; return; }
   g.innerHTML = '';
-  photos.forEach(function(src, i) {
+  photos.forEach(function(photo, i) {
+    var src = typeof photo === 'string' ? photo : photo.dataUrl;
+    var saved = typeof photo === 'string' ? false : photo.saved;
     var div = document.createElement('div'); div.className = 'cam-thumb';
     var img = document.createElement('img'); img.src = src;
     img.onclick = function() { viewPhoto(src); };
+    var badge = document.createElement('div');
+    badge.style.cssText = 'position:absolute;bottom:3px;left:3px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;' +
+      (saved ? 'background:rgba(46,125,50,.85);color:#fff' : 'background:rgba(100,100,100,.75);color:#fff');
+    badge.textContent = saved ? '保存済' : '未保存';
     var del = document.createElement('button'); del.className = 'cam-tdel'; del.textContent = '✕';
-    del.onclick = function() { camPhotos[pid].splice(i,1); renderGallery(pid); };
-    div.appendChild(img); div.appendChild(del); g.appendChild(div);
+    del.onclick = function() { camPhotos[pid].splice(i, 1); renderGallery(pid); markUnsaved(); };
+    div.appendChild(img); div.appendChild(badge); div.appendChild(del);
+    g.appendChild(div);
   });
 }
 function viewPhoto(src) {
@@ -1330,6 +1350,17 @@ function collectAll() {
     });
     return { id:pid, label:pg.label, judgments:Object.assign({},pg.jState), vr:getV(pid+'-vr'), vs:getV(pid+'-vs'), vt:getV(pid+'-vt'), ar:getV(pid+'-ar'), as:getV(pid+'-as'), at:getV(pid+'-at'), power:getV(pid+'-power'), transformers:trs, kiki:kikis, notes:getV(pid+'-notes') };
   });
+  // ツールページの写真を収集
+  var photos = [];
+  toolPages.forEach(function(tp) {
+    var pid = tp.id;
+    var pagePhotos = camPhotos[pid] || [];
+    pagePhotos.forEach(function(p, i) {
+      var src = typeof p === 'string' ? p : p.dataUrl;
+      photos.push({ dataUrl: src, index: i, pid: pid });
+    });
+  });
+
   var batt = battPages.map(function(pg) {
     var pid = pg.id;
     var cells = [];
@@ -1341,7 +1372,7 @@ function collectAll() {
     return { id: pid, label: pg.label, name: getV(pid + '-name'), cells: cells, notes: getV(pid + '-notes') };
   });
   var facility = elecPages.length ? (getV(elecPages[0].id + '-facility') || '未設定') : '未設定';
-  return { date:dateStr, inspector:currentUser, facilityName:facility, elec:elec, gen:gen, solar:solar, batt:batt, savedAt:new Date().toISOString() };
+  return { date:dateStr, inspector:currentUser, facilityName:facility, elec:elec, gen:gen, solar:solar, batt:batt, photos:photos, savedAt:new Date().toISOString() };
 }
 
 // ===== CSV =====
@@ -1447,6 +1478,24 @@ function saveAll(d) {
     store_set(key, JSON.stringify(d));
     unsaved = false;
   } catch(e) { showToast('ローカル保存エラー', 'err'); return; }
+  // 写真を端末（localStorage）に保存
+  if (d.photos && d.photos.length > 0) {
+    try {
+      var photoKey = 'photos-' + dateKey;
+      var photoArr = d.photos.map(function(p) { return p.dataUrl; });
+      store_set(photoKey, JSON.stringify(photoArr));
+      // 端末ダウンロード
+      d.photos.forEach(function(p, i) {
+        var now = new Date();
+        var pname = dateKey + '_photo' + (i+1) + '_' + currentUser + '.jpg';
+        var pblob = dataUrlToBlob(p.dataUrl);
+        var purl = URL.createObjectURL(pblob);
+        var pa = document.createElement('a'); pa.href = purl; pa.download = pname; pa.click();
+        URL.revokeObjectURL(purl);
+      });
+    } catch(e) { console.warn('photo local save error:', e); }
+  }
+
   // Drive保存（GAS経由）
   showToast('Driveに保存中...', 'ok');
   saveToDrive(csv, fname).then(function(ok) {
@@ -1454,6 +1503,8 @@ function saveAll(d) {
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a'); a.href = url; a.download = fname; a.click(); URL.revokeObjectURL(url);
+    // 写真をDriveに保存
+    savePhotosToDrive(d.photos, dateKey);
     if (GAS_URL.indexOf('YOUR_SCRIPT_ID') < 0) {
       showToast(ok ? 'Drive保存&CSV完了！' : 'Drive保存失敗 CSVはダウンロード済み', ok ? 'ok' : 'warn');
     } else {
@@ -1464,6 +1515,41 @@ function saveAll(d) {
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a'); a.href = url; a.download = fname; a.click(); URL.revokeObjectURL(url);
+  });
+}
+
+// dataURL → Blob変換
+function dataUrlToBlob(dataUrl) {
+  var arr = dataUrl.split(',');
+  var mime = arr[0].match(/:(.*?);/)[1];
+  var bstr = atob(arr[1]);
+  var n = bstr.length;
+  var u8arr = new Uint8Array(n);
+  while (n--) u8arr[n] = bstr.charCodeAt(n);
+  return new Blob([u8arr], { type: mime });
+}
+
+// 写真をまとめてDriveに保存
+function savePhotosToDrive(photos, dk) {
+  if (!photos || !photos.length) return;
+  if (GAS_URL.indexOf('YOUR_SCRIPT_ID') >= 0) return;
+  photos.forEach(function(p, i) {
+    var src = typeof p === 'string' ? p : p.dataUrl;
+    var pname = dk + '_photo' + (i+1) + '_' + currentUser + '.jpg';
+    fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'savePhoto', userName: currentUser, fileName: pname, imageData: src })
+    }).then(function() {
+      // 保存済みフラグを立てる
+      toolPages.forEach(function(tp) {
+        var pid = tp.id;
+        var arr = camPhotos[pid] || [];
+        arr.forEach(function(ph) { if (ph && ph.dataUrl === src) ph.saved = true; });
+        renderGallery(pid);
+      });
+    }).catch(function(e) { console.warn('photo drive save error:', e); });
   });
 }
 function autoSave() {
@@ -1918,9 +2004,9 @@ function showLocalPreviewSummary(h) {
 }
 
 function showLocalPreview(h, data) {
-  // JSONデータからCSVを生成してCsvViewerで表示（Drive版と統一）
+  // CSVビューワー表示
   var built = buildCSV(data);
-  showCsvViewer(built.fname, built.csv);
+  showCsvViewer(built.fname, built.csv, data);
 }
 
 function showCsvViewer(fileName, csvText) {
@@ -1985,7 +2071,7 @@ function showCsvViewer(fileName, csvText) {
     }
   });
   content.innerHTML = html || '<div style="color:#bbb;text-align:center;padding:20px;font-size:12px">内容がありません</div>';
-  box.appendChild(hdr); box.appendChild(content);
+  box.appendChild(hdr); box.appendChild(tabBar); box.appendChild(content); box.appendChild(photoPane);
   ov.appendChild(box);
   ov.onclick = function(e) { if (e.target === ov) document.body.removeChild(ov); };
   document.body.appendChild(ov);
@@ -2103,9 +2189,12 @@ function closeNumpad() {
   if (numpadTarget) {
     if (numpadTarget.value === '') numpadTarget.value = '-';
     numpadTarget.classList.toggle('is-dash', numpadTarget.value === '-');
-    var ev = document.createEvent('Event');
-    ev.initEvent('change', true, true);
-    numpadTarget.dispatchEvent(ev);
+    // data-extraに書かれたコールバック（calcPower, syncPfなど）を実行
+    var extra = numpadTarget.getAttribute('data-extra');
+    if (extra) {
+      try { new Function(extra)(); } catch(e) {}
+    }
+    markUnsaved();
     numpadTarget = null;
   }
 }
